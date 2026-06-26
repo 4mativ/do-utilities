@@ -4,8 +4,8 @@ from time import time
 from boto3 import client
 from pandas import options
 
-from Common import getCreds
-from QueryDataWarehouse.QueryDataWarehouse import createS3Connection
+from ..Common import getCreds
+from QueryDataWarehouse import createS3Connection
 
 # Removes a warning about chaining assignments
 options.mode.chained_assignment = None

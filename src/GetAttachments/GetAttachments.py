@@ -6,7 +6,7 @@ from imbox import Imbox
 from glob import glob
 import datetime
 
-from Common import getCreds
+from ..Common import getCreds
 
 creds = getCreds("gmail-personal")
 download_folder = os.path.dirname(__file__) + "\\Attachments"

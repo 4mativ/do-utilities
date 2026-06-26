@@ -6,9 +6,9 @@ import pandas as pd
 from pandas import to_datetime
 import numpy as np
 
-import SqlDb.SqlTableVariables as variables
-from Common import generateMasterFile, getCreds, getInput, convertDistrictKids
-from Constants import f_year
+import SqlTableVariables as variables
+from ..Common import generateMasterFile, getCreds, getInput, convertDistrictKids
+from ..Constants import f_year
 from google.cloud import bigquery
 from google.oauth2 import service_account
 from datetime import datetime

@@ -11,8 +11,8 @@ import requests
 from numpy import nan
 from requests_futures.sessions import FuturesSession
 
-from Geocoding.GoogleApi import UpdateQueryDB
-from Constants import creds
+from GoogleApi import UpdateQueryDB
+from ..Constants import creds
 
 geo_api = "https://maps.googleapis.com/maps/api/geocode/json"
 route_api = "https://maps.googleapis.com/maps/api/directions/json"
