@@ -16,7 +16,7 @@ from Common import getCreds, getSchoolFromAlpha
 from Constants import data_ops_drive, school_year, data_ops_drive_id, general_drive_id
 
 
-def FindAllTemplateValues(template_id):
+def findAllTemplateValues(template_id):
 
     try:
         creds = oAuth()
@@ -78,7 +78,7 @@ def oAuth():
     return creds
 
 
-def CopyDataTemplateForAlpha(alpha, sy=school_year):
+def copyDataTemplateForAlpha(alpha, sy=school_year):
     try:
         service = build("drive", "v3", credentials=oAuth())
 
@@ -137,7 +137,7 @@ def CopyDataTemplateForAlpha(alpha, sy=school_year):
         return ""
 
 
-def GenerateExecutiveSummary(value_dict=None, test=None, save_path=os.path.dirname(__file__) + "\\Exec.pdf"):
+def generateExecutiveSummary(value_dict=None, test=None, save_path=os.path.dirname(__file__) + "\\Exec.pdf"):
 
     # Replacement values
     needed_keys = [
@@ -350,7 +350,7 @@ def GenerateExecutiveSummary(value_dict=None, test=None, save_path=os.path.dirna
         print(f"An error occurred during the creation of the executive summary: {error}")
 
 
-def ReplaceGoogleSheetData(sheet_id, df):
+def replaceGoogleSheetData(sheet_id, df):
     scope_app = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     connection = gspread.authorize(ServiceAccountCredentials.from_json_keyfile_dict(getCreds("google-drive"), scope_app))
 
@@ -363,7 +363,7 @@ def ReplaceGoogleSheetData(sheet_id, df):
     google_sheet.set_dataframe(df, (1, 1))
 
 
-def FindFileID(file_name, drive_name):
+def findFileID(file_name, drive_name):
     service = build("drive", "v3", credentials=oAuth())
 
     results = (
@@ -383,9 +383,9 @@ def FindFileID(file_name, drive_name):
     return file_id
 
 
-def Main():
-    print(FindFileID("Billing Data", "dataops"))
+def main():
+    print(findFileID("Billing Data", "dataops"))
 
 
 if __name__ == "__main__":
-    Main()
+    main()

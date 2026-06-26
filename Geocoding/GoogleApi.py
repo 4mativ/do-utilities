@@ -711,7 +711,7 @@ def UpdateQueryDB(queries=pd.DataFrame(), save=True):
         pass
 
 
-def Main():
+def main():
     # pass
     print(
         "Routed stop addresses = ",
@@ -734,7 +734,7 @@ def Main():
 
 
 if __name__ == "__main__":
-    # Main()
+    # main()
     print(Geocode("90002 Duncan U Fletcher High Ac, Jacksonville", False))
     print(Geocode("806 4Th Ave S, Jacksonville", False))
     print(Geocode("287 Stonemason Way, Jacksonville", False))
