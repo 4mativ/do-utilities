@@ -1,0 +1,25 @@
+{
+    "configurations": [
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceRoot}"
+            }
+        },
+        {
+            "name": "Python: Run File w/o debug",
+            "type": "debugpy",
+            "pythonArgs": ["-O"],
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceRoot}"
+            }
+        }
+    ]
+}
