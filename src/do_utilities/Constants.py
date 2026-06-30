@@ -1,8 +1,6 @@
 import os
 from collections import namedtuple
 from datetime import datetime
-from oauth2client.service_account import ServiceAccountCredentials
-import gspread
 from copy import deepcopy
 from dotenv import dotenv_values
 from pandas import read_csv, DataFrame
