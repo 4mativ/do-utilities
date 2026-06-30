@@ -25,7 +25,7 @@ from anglicize import anglicize
 from rapidfuzz import process, fuzz
 
 # from Geocoding.GoogleApi import GetRoutedDistance, EquivalentAddresses
-from do_utils.Constants import getStandards, getCred, data_ops_drive, initializeVariables
+from do_utilities.Constants import getStandards, getCred, data_ops_drive, initializeVariables
 # from AddressStandardizer import convertAddress
 
 options.mode.chained_assignment = None

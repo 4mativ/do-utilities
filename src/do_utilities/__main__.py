@@ -1,6 +1,6 @@
 
-import do_utils.Constants
-import do_utils.Common
+import do_utilities.Constants
+import do_utilities.Common
 
 
 def main():

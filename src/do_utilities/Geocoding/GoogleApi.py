@@ -9,7 +9,7 @@ from googlemaps.convert import decode_polyline
 from googlemaps.directions import directions
 from numpy import nan
 
-from do_utils.Constants import creds
+from do_utilities.Constants import creds
 import time
 
 # Move to the current folder to read and write locally
