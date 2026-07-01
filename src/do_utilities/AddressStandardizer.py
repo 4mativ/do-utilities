@@ -2,10 +2,15 @@ import os
 from string import capwords
 
 from usaddress import tag
+from rapidfuzz.fuzz import QRatio
 
 from do_utilities.Constants import getStandards, initializeVariables
 
 standard = getStandards()
+
+
+def streetAddressApproximatelyEqual(add1, add2, match_amount=85):
+    return QRatio(add1, add2) >= match_amount
 
 
 # Function for applying address standards such as North Street --> N St
