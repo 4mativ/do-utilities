@@ -24,41 +24,48 @@ gmaps = googlemaps.Client(key=creds["GOOGLE-MAPS-GKEY"])
 # Route finding requires calling a slightly different endpoint
 route_api = "https://maps.googleapis.com/maps/api/directions/json"
 
-# Read the master query log into memory, used to reduce overall API queries
-try:
-    query_db = pd.read_csv("QueryDB.csv", low_memory=False)
-    query_db.drop_duplicates(inplace=True)
-    query_db.to_csv("QueryDB.csv", index=False)
-except Exception:
-    # If it doesn't exist, make one
-    query_db = pd.DataFrame(
-        [], columns=["Lat1", "Long1", "Stop1", "Lat2", "Long2", "Stop2", "Distance", "Route", "Navigation Mode"]
-    )
 
-# Read the master query log into memory, used to reduce overall API queries
-try:
-    route_query_db = pd.read_csv("RouteQueryDB.csv")
-except Exception:
-    # If it doesn't exist, make one
-    route_query_db = pd.DataFrame([], columns=["Lat1", "Long1", "Lat2", "Long2", "Stops"])
+query_db = pd.DataFrame(
+    [], columns=["Lat1", "Long1", "Stop1", "Lat2", "Long2", "Stop2", "Distance", "Route", "Navigation Mode"]
+)
 
-# Read the master query log into memory, used to reduce overall API queries
-try:
-    polyLineQueryDB = pd.read_csv("PolyLineQueryDB.csv")
-except:
-    # If it doesn't exist, make one
-    polyLineQueryDB = pd.DataFrame([], columns=["Route", "Stops", "PolyLine"])
+route_query_db = pd.DataFrame([], columns=["Lat1", "Long1", "Lat2", "Long2", "Stops"])
+
+polyLineQueryDB = pd.DataFrame([], columns=["Route", "Stops", "PolyLine"])
 
 
-def CalculateLatLongDistanceWithStops(stop1, stop2):
+def initializeDBs(stops, routes, poly):
+    global query_db, route_query_db, polyLineQueryDB
+    try:
+        if stops == stops and not stops.empty:
+            query_db = stops
+    except:
+        pass
+    try:
+        if routes == routes and not routes.empty:
+            route_query_db = routes
+    except:
+        pass
+    try:
+        if poly == poly and not poly.empty:
+            polyLineQueryDB = poly
+    except:
+        pass
+
+
+def getDBs():
+    return [query_db, route_query_db, polyLineQueryDB]
+
+
+def calculateLatLongDistanceWithStops(stop1, stop2):
     if nan in [stop1, stop2]:
         return nan
     if stop1 == stop2:
         return 0
 
-    latlong1 = Geocode(stop1, save=True)
-    latlong2 = Geocode(stop2, save=True)
-    return CalculateLatLongDistance(latlong1[0], latlong1[1], latlong2[0], latlong2[1])
+    latlong1 = geocode(stop1, save=True)
+    latlong2 = geocode(stop2, save=True)
+    return calculateLatLongDistance(latlong1[0], latlong1[1], latlong2[0], latlong2[1])
 
 
 # Calculates an approximate distance between two points on a sphere using the haversine formula
@@ -68,7 +75,7 @@ def CalculateLatLongDistanceWithStops(stop1, stop2):
 # a = sin²(Δφ/2) + cos φ1 ⋅ cos φ2 ⋅ sin²(Δλ/2) c = 2 ⋅ atan2( √a, √(1−a) ) d = R ⋅ c
 # where φ (phi) is latitude, λ (lambda) is longitude, R is earth’s radius (mean radius = 3958.8mi)
 # note that angles need to be in radians to pass to trig functions!
-def CalculateLatLongDistance(latitude1, longitude1, latitude2, longitude2):
+def calculateLatLongDistance(latitude1, longitude1, latitude2, longitude2):
     if nan in [latitude1, longitude1, latitude2, longitude2]:
         return nan
 
@@ -95,12 +102,8 @@ def CalculateLatLongDistance(latitude1, longitude1, latitude2, longitude2):
     return final
 
 
-def GetDf():
-    return query_db
-
-
 # Get all of the routed coordinates between two points
-def GetRouteBetweenPoints(lat1, long1, lat2, long2):
+def getRouteBetweenPoints(lat1, long1, lat2, long2):
     # Check if this distance query exists in the database already
     test = route_query_db[
         (route_query_db["Lat1"] == lat1)
@@ -154,7 +157,7 @@ def GetRouteBetweenPoints(lat1, long1, lat2, long2):
 
 
 # The master distance finding functions that takes lat longs and addresses as parameters
-def GetRoutedDistance(lat1, long1, lat2, long2, stop1, stop2, route, mode="driving", save=True):
+def getRoutedDistance(lat1, long1, lat2, long2, stop1, stop2, route, mode="driving", save=True):
     # Set the default distance between points as 0
     distance = 0
 
@@ -166,15 +169,15 @@ def GetRoutedDistance(lat1, long1, lat2, long2, stop1, stop2, route, mode="drivi
         return distance
 
     # Calculate the haversine difference between the two points to check against later if needed
-    check = CalculateLatLongDistance(lat1, long1, lat2, long2)
+    check = calculateLatLongDistance(lat1, long1, lat2, long2)
     try:
         # Try to get the distance between the two lat longs
-        distance = GetRoutedDistanceFromLatLong(lat1, long1, lat2, long2, route, mode, save)
+        distance = getRoutedDistanceFromLatLong(lat1, long1, lat2, long2, route, mode, save)
 
     except Exception:
         try:
             # Using the lat/longs didn't work, try using the addresses
-            distance = GetRoutedDistanceFromAddresses(stop1, stop2, route, mode, save)
+            distance = getRoutedDistanceFromAddresses(stop1, stop2, route, mode, save)
         except Exception:
             # Neither options worked, check if the haversine formula found that the points are
             # actually apart from one another
@@ -209,7 +212,7 @@ def GetRoutedDistance(lat1, long1, lat2, long2, stop1, stop2, route, mode="drivi
     return distance
 
 
-def GetVehicleRoute(stops, route_name):
+def getVehicleRoute(stops, route_name):
     all_stops = str(stops)
 
     # Check if this query exists in the database already
@@ -248,9 +251,9 @@ def GetVehicleRoute(stops, route_name):
         raise Exception
 
 
-def GetMdeRoutedDistanceFromLatLong(lat1, long1, lat2, long2):
+def getMDERoutedDistanceFromLatLong(lat1, long1, lat2, long2):
     # Get haversine distance between points
-    check = CalculateLatLongDistance(lat1, long1, lat2, long2)
+    check = calculateLatLongDistance(lat1, long1, lat2, long2)
 
     # Check if this distance query exists in the database already
     test = query_db[
@@ -331,9 +334,9 @@ def GetMdeRoutedDistanceFromLatLong(lat1, long1, lat2, long2):
 
 
 # Get the distance between two lat/longs
-def GetRoutedDistanceFromLatLong(lat1, long1, lat2, long2, route, mode="driving", save=True):
+def getRoutedDistanceFromLatLong(lat1, long1, lat2, long2, route, mode="driving", save=True):
     # Get haversine distance between points
-    check = CalculateLatLongDistance(lat1, long1, lat2, long2)
+    check = calculateLatLongDistance(lat1, long1, lat2, long2)
 
     # Check if this distance query exists in the database already
     test = query_db[
@@ -430,7 +433,7 @@ def GetRoutedDistanceFromLatLong(lat1, long1, lat2, long2, route, mode="driving"
 
 
 # Get the distance between two addresses
-def GetRoutedDistanceFromAddresses(stop1, stop2, route, navigation_mode="driving", save=True):
+def getRoutedDistanceFromAddresses(stop1, stop2, route, navigation_mode="driving", save=True):
     global query_db
     # Check if this query exists in the database already
     test = query_db[
@@ -496,7 +499,7 @@ def GetRoutedDistanceFromAddresses(stop1, stop2, route, navigation_mode="driving
                 save = False
 
             # Get haversine distance between points
-            check = CalculateLatLongDistance(lat1, long1, lat2, long2)
+            check = calculateLatLongDistance(lat1, long1, lat2, long2)
 
             # If the calculated distance seems high, print it out for review
             if 75 > distance > 25 and abs(distance - check) > 10:
@@ -546,7 +549,7 @@ def GetRoutedDistanceFromAddresses(stop1, stop2, route, navigation_mode="driving
 
 
 # Call the google api to convert an address to lat/longs
-def Geocode(address, save=True):
+def geocode(address, save=True):
     global query_db
     if address in [None, "", nan, "nan"]:
         return nan, nan
@@ -612,27 +615,24 @@ def Geocode(address, save=True):
     return lat_long
 
 
-def EquivalentAddresses(add1, add2):
-
-    if "4848 Flag" in add1 and "4848 Flag" in add2:
-        print()
+def equivalentAddresses(add1, add2):
 
     # Check if this exists in the database already, and return the lat/longs if so
     start_address = query_db[(query_db["Stop1"] == add1) & (query_db["Route"] == "Geocode")]
     if start_address.empty:
-        Geocode(add1)
+        geocode(add1)
         start_address = query_db[(query_db["Stop1"] == add1) & (query_db["Route"] == "Geocode")]
     lat1 = start_address["Lat1"].mode()[0]
     lon1 = start_address["Long1"].mode()[0]
 
     start_address = query_db[(query_db["Stop1"] == add2) & (query_db["Route"] == "Geocode")]
     if start_address.empty:
-        Geocode(add2)
+        geocode(add2)
         start_address = query_db[(query_db["Stop1"] == add2) & (query_db["Route"] == "Geocode")]
     lat2 = start_address["Lat1"].mode()[0]
     lon2 = start_address["Long1"].mode()[0]
 
-    return CalculateLatLongDistance(lat1, lon1, lat2, lon2) < 0.2
+    return calculateLatLongDistance(lat1, lon1, lat2, lon2) < 0.2
 
 
 # Call the google api to convert lat longs to an address
@@ -698,43 +698,21 @@ def ReverseGeocode(lat, long, save=True):
     return address
 
 
-def UpdateQueryDB(queries=pd.DataFrame(), save=True):
+def updateQueryDB(queries=pd.DataFrame()):
     global query_db
     try:
         if not queries.empty:
             query_db = pd.concat([query_db, queries], ignore_index=True)
         query_db = query_db.drop_duplicates()
-        if not query_db.empty and save:
-            os.chdir(os.path.dirname(__file__))
-            query_db.to_csv("QueryDB.csv", index=False)
     except Exception:
         pass
 
 
 def main():
-    # pass
-    print(
-        "Routed stop addresses = ",
-        GetRoutedDistanceFromAddresses(
-            "N Bryant Ave & N 41st Ave, Minneapolis, MN 55412", "43rd Ave N & Beard Ave N, Robbinsdale, MN 55422", "MDE"
-        ),
-    )
-    print(
-        "Crow stop addresses = ",
-        CalculateLatLongDistanceWithStops(
-            "N Bryant Ave & N 41st Ave, Minneapolis, MN 55412", "43rd Ave N & Beard Ave N, Robbinsdale, MN 55422"
-        ),
-    )
-
-    print(
-        "Routed lat/longs = ",
-        GetRoutedDistanceFromLatLong(45.0295, -93.2906, 45.0334, -93.3238, "MDE"),
-    )
-    print("Crow lat/longs = ", CalculateLatLongDistance(45.0295, -93.2906, 45.0334, -93.3238))
+    pass
+    
 
 
 if __name__ == "__main__":
-    # main()
-    print(Geocode("90002 Duncan U Fletcher High Ac, Jacksonville", False))
-    print(Geocode("806 4Th Ave S, Jacksonville", False))
-    print(Geocode("287 Stonemason Way, Jacksonville", False))
+    main()
+

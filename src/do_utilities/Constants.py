@@ -331,3 +331,5 @@ def getCred(cred_name):
 
 def getStandards():
     return df_standardizations
+
+initializeVariables()

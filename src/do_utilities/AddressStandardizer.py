@@ -13,6 +13,22 @@ def streetAddressApproximatelyEqual(add1, add2, match_amount=85):
     return QRatio(add1, add2) >= match_amount
 
 
+# Compare two addresses fully
+def fullAddressEqual(add1, add2):
+    new_arr1 = combineAddressArray(add1)
+    new_arr2 = combineAddressArray(add2)
+    return all(cur in new_arr2 for cur in new_arr1)
+
+
+def combineAddressArray(address):
+    # Separate everything by the commas and sort the address components alphabetically to ensure
+    # the components match
+    arr = address.split(",")
+    for i in range(len(arr)):
+        arr[i] = " ".join(sorted(arr[i].split(" ")))
+    return " ".join(arr).split(" ")
+
+
 # Function for applying address standards such as North Street --> N St
 def standardization(text):
     
