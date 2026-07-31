@@ -125,6 +125,9 @@ def getNewProductData(report_type="all_trips", pull_date=datetime.now() - DateOf
     if report_type not in conversion:
         print(f"Error: the only supported files for getNewProductData are {conversion.keys()}")
         quit(1)
+    
+    # Make the pull_date a monday
+    pull_date = pull_date - DateOffset(days = pull_date.weekday())
 
     if pull_date > datetime(2025, 2, 10):
         # Moved from monday to tuesday
