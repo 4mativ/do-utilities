@@ -4,16 +4,52 @@ from datetime import datetime
 from copy import deepcopy
 from dotenv import dotenv_values
 from pandas import read_csv, DataFrame
+import platform
+import glob
+
+
+def getDriveRoot():
+    system = platform.system()
+
+    if system == "Windows":
+        return "G:/Shared drives"
+
+    elif system == "Darwin":  # macOS
+        cloud_storage = os.path.expanduser("~/Library/CloudStorage")
+        matches = glob.glob(os.path.join(cloud_storage, "GoogleDrive-*"))
+
+        if not matches:
+            raise FileNotFoundError(
+                "Could not find a Google Drive mount under "f"{cloud_storage}. Is Google Drive for Desktop installed "
+                "and signed in?"
+            )
+        if len(matches) > 1:
+            raise RuntimeError(
+                "Multiple Google Drive accounts detected: "f"{matches}. Please specify which one to use."
+            )
+
+        return os.path.join(matches[0], "Shared drives")
+
+    elif system == "Linux":
+        return os.path.expanduser("~/GoogleDrive/Shared drives")
+
+    else:
+        raise RuntimeError(f"Unsupported platform: {system}")
+
+
+google_drive_root = getDriveRoot()
+
+shared_drives = os.path.join(google_drive_root, "Shared drives")
+
 
 # A utility file that other scripts may import and use its common variables
+shared_4mativ_drive = os.path.join(shared_drives, "4MATIV General")
 
-shared_4mativ_drive = "G:/Shared drives/4MATIV General"
+diagnostics_drive = os.path.join(shared_drives, "Consulting")
 
-diagnostics_drive = "G:/Shared drives/Consulting"
+data_ops_drive = os.path.join(shared_drives, "Data_Ops")
 
-data_ops_drive = "G:/Shared drives/Data_Ops"
-
-active_diagnostics_folder = diagnostics_drive + "/0. Consulting - Ongoing"
+active_diagnostics_folder = os.path.join(diagnostics_drive, "0. Consulting - Ongoing")
 
 billing_doc_id = "12NvTg2NfkuvnT-bM7lO0eTu4WW3BWA7ul0t0y7YvX7E"
 
@@ -285,7 +321,9 @@ def initializeVariables(filepath = os.getcwd()):
 
     # The path to the github repository that this repo is in, used to reference other repo's files in
     # scripts
-    github_file_path = str(filepath)[: str(filepath).find("GitHub") + 7]
+    current_path = os.path.abspath(__file__).split(os.sep)
+    github_file_path = os.sep.join(current_path[:current_path.index("GitHub")+1]) + os.sep
+    
     creds = dotenv_values(github_file_path + ".env")
     for cur in ["google-drive", "postgres", "qb", "gmail-personal", "dw", "twilio"]:
         creds[cur] = [[x.replace(f"{cur.upper()}-", ""), creds[x]] for x in creds if f"{cur.upper()}" in x]
@@ -320,8 +358,9 @@ def initializeVariables(filepath = os.getcwd()):
     #         df.reset_index(drop=True, inplace=True)
     #     billing_dbs[name] = df
     # Save the file path to the files in the InvoicingDB repo
-    invoicing_db_path = github_file_path + "Automation-Scripts/Invoicing/InvoicingDBs/"
-    df_standardizations = read_csv(data_ops_drive + "/Databases/Standardization.csv")
+    invoicing_db_path = os.path.join(github_file_path, "Automation-Scripts", "Invoicing",
+        "InvoicingDBs") + os.path.sep
+    df_standardizations = read_csv(os.path.join(data_ops_drive, "Databases","Standardization.csv"))
 
 def getCred(cred_name):
     if cred_name in creds.keys():

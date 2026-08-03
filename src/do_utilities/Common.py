@@ -36,7 +36,7 @@ standard = getStandards()
 
 # Ramsey County Foster and some other schools need to be treated as a single entity, so we need to
 # know all of the schools that fall under their umbrellas
-df_toms_schools = read_csv(data_ops_drive + "/Databases/All_TOMS_schools.csv")
+df_toms_schools = read_csv(os.path.join(data_ops_drive, "Databases","All_TOMS_schools.csv"))
 df_toms_schools["District Alpha"] = ""
 
 always_convert = [
@@ -255,30 +255,30 @@ def getSchoolMatrixRegionPath(alpha):
     if state != state or str(state).lower() == "nan":
         print(f"Failed to find state for: {alpha}")
         quit(1)
-    return f"\\{state}\\{alpha}\\"
+    return f"{os.sep}{state}{os.sep}{alpha}{os.sep}"
 
 # Get the QBR filepath for saving, file path is State\Alpha\
 def getSchoolSharedFolderPath(alpha):
     school = getSchoolFromAlpha(alpha)
     if school == "Ramsey Cty-Foster":
-        return "MSP RAM\\MSP RAM FULL\\"
+        return f"MSP RAM{os.sep}MSP RAM FULL{os.sep}"
     state = compareToSchools(school, "School", ["State"])[0]
 
     shared_folder_name = "4mativ-" + alpha + "-Shared Folder"
 
     if state == "MN":
-        return "MSP\\" + alpha + "\\" + shared_folder_name + "\\"
+        return f"MSP{os.sep}{alpha}{os.sep}{shared_folder_name}{os.sep}"
     elif state == "TX":
         state = "HOU"
     elif state == "IN":
-        state = "IND\\INDY"
+        state = f"IND{os.sep}INDY"
     elif state == "AZ":
-        state = "PHX\\Paul Revere" if alpha == "PRA" else "PHX\\VCP Arizona"
+        state = f"PHX{os.sep}Paul Revere" if alpha == "PRA" else f"PHX{os.sep}VCP Arizona"
     else:
         print(f"ERROR: NO state found for {alpha} / {school}")
         quit(1)
 
-    return f"{state}\\{alpha}\\"
+    return f"{os.sep}{state}{os.sep}{alpha}{os.sep}"
 
 
 # Get the street address of all schools
@@ -496,7 +496,7 @@ def sendEmail(sender, to, cc, subject, body, attachment_filepath=None, bcc=None)
             # Encode into base64
             encoders.encode_base64(p)
 
-            filename = cur_file.replace("\\", "/").split("/")[-1]
+            filename = cur_file.split(os.sep)[-1]
 
             # Save the file name as part of the attachment
             p.add_header("Content-Disposition", f"attachment; filename= {filename}")
@@ -562,8 +562,10 @@ def generateRequirementsFile(move_locations = True):
         if move_locations:
             os.chdir(os.path.dirname(__file__))
         
-        repo_path = "/".join(os.getcwd().split("\\"))
-        command = f"python.exe -m pip list --format=freeze > {repo_path}/requirements.txt"
+        current_path = os.path.abspath(__file__).split(os.sep)
+        repo_path = os.sep.join(current_path[:current_path.index("GitHub") + 2]) + os.sep
+        
+        command = f"python.exe -m pip list --format=freeze > {repo_path}{os.sep}requirements.txt"
         
         os.chdir(repo_path)
         os.system(command)
@@ -578,18 +580,21 @@ def getCreds(cred_name):
 # ------------- Archive System ----------------------- #
 
 def archiveRun(start_location, current_files=True):
+    
+    if start_location[-1] != os.sep:
+        start_location += os.sep
 
     if not "Run Files" in start_location:
-        start_location += "\\Run Files\\"
+        start_location += f"Run Files{os.sep}"
 
     date_string = date.today().strftime("%Y_%m_%d")
 
     # Generate the filepath to save this file in the state's run folder
 
-    archive_path = start_location + "Used\\"
+    archive_path = f"{start_location}Used{os.sep}"
 
     if current_files:
-        paths = [archive_path + "LastRun\\", archive_path + date_string + "\\"]
+        paths = [archive_path + f"LastRun{os.sep}", archive_path + f"{date_string}{os.sep}"]
         try:
             while len(next(os.walk(archive_path))[1]) > 10:
                 oldest_folder = next(os.walk(archive_path))[1][0]
@@ -602,16 +607,15 @@ def archiveRun(start_location, current_files=True):
         except:
             pass
     else:
-        start_location = archive_path + "LastRun\\"
+        start_location = archive_path + f"LastRun{os.sep}"
         try:
             # -2 = last date archive folder, -1 = LastRun folder
             newest_folder = next(os.walk(archive_path))[1][-2]
-            paths = [archive_path + newest_folder + "\\"]
+            paths = [archive_path + newest_folder + os.sep]
         except Exception:
-            paths = [archive_path + "LastRun\\"]
+            paths = [archive_path + f"LastRun{os.sep}"]
             print("ERROR: Failed to Unload last run files")
 
-    paths = [x.replace("\\", "/") for x in paths]
 
     for input_folder in next(os.walk(start_location))[1]:
         if input_folder.lower() in ["used", ".gitkeep"]:
@@ -625,12 +629,10 @@ def archiveRun(start_location, current_files=True):
 
 
 def archiveFiles(input_folder, paths, start_location):
-    start_location = start_location.replace("\\", "/")
-    if start_location[-1] != "/":
-        start_location += "/"
-    files = glob(start_location + input_folder + "/*")
+    if start_location[-1] != os.sep:
+        start_location += os.sep
+    files = glob(start_location + input_folder + f"{os.sep}*")
     for f in files:
-        f = f.replace("\\", "/")
         try:
             for cur_path in paths:
                 new_path = f.replace(start_location, cur_path)
@@ -643,12 +645,13 @@ def archiveFiles(input_folder, paths, start_location):
                 if not os.path.exists(new_path):
                     os.makedirs(new_path)
             # Found folder instead of file, run again on this folder
-            archiveFiles(input_folder + "/" + folder, paths, start_location)
+            archiveFiles(input_folder + os.sep + folder, paths, start_location)
 
 
 def getPreviousRun(start_location):
     try:
-        newest_folder = start_location + "\\Run Files\\Used\\LastRun"
+        newest_folder = os.path.join(start_location, "Run Files", "Used", "LastRun")
+
         if not os.path.exists(newest_folder):
             raise Exception
         newest_folder = "LastRun"
@@ -656,23 +659,24 @@ def getPreviousRun(start_location):
     except Exception:
         try:
             # Find the newest run folder to move the inputs from
-            if len(next(os.walk(start_location + "\\Run Files\\Used\\"))[1]) >= 1:
-                newest_folder = next(os.walk(start_location + "\\Run Files\\Used\\"))[1][-1]
+            if len(next(os.walk(os.path.join(start_location, "Run Files", "Used", "")))[1]) >= 1:
+                newest_folder = next(os.walk(os.path.join(start_location, "Run Files", "Used", "")))[1][-1]
                 print("Loading inputs from folder:", newest_folder)
         except Exception:
             print("Unable to Reload input files as there are no saved archives")
             quit(1)
 
     # Save the current location of the run's folder
-    newest_path = start_location + "\\Run Files\\Used\\" + newest_folder
+    newest_path = os.path.join(start_location, "Run Files", "Used", newest_folder)
+    
 
     # Iterate through each folder in the last run and move its contents to the Run Files folder
     for folder in next(os.walk(newest_path))[1]:
         if "output" in folder.lower():
             continue
-        files = glob(newest_path + "\\" + folder + "\\*")
+        files = glob(f"{newest_path}{os.sep}{folder}{os.sep}*")
         for f in files:
-            temp = f.replace("Run Files\\Used\\" + newest_folder, "Run Files")
+            temp = f.replace(os.path.join("Run Files", "Used", newest_folder), "Run Files")
             move(f, temp)
 
 

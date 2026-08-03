@@ -48,7 +48,7 @@ def getUpdatedRamseyData():
     ramsey_trips = ramsey_trips[ramsey_trips["TransportationVendor"] != "Unassigned"]
 
     save_path = os.path.dirname(__file__).replace(
-        "Utilities\\QueryDataWarehouse", "Invoicing\\Ramsey\\InvoiceProcessing"
+        f"Utilities{os.sep}QueryDataWarehouse", f"Invoicing{os.sep}Ramsey{os.sep}InvoiceProcessing"
     )
     os.chdir(save_path)
 
@@ -77,7 +77,8 @@ def getUpdatedRamseyData():
 
     if len(dupe_students) > 0:
         print(
-            f"There are {len(dupe_students)} extra entries " f"because the below students are under multiple schools\n"
+            f"There are {len(dupe_students)} extra entries because the below students are under "
+            f"multiple schools\n"
         )
         for cur_dupe in dupe_students:
             print(
@@ -85,7 +86,7 @@ def getUpdatedRamseyData():
                 f"{ramsey_students['School'].loc[ramsey_students['Student Name']==cur_dupe].unique()}\n"
             )
 
-    ramsey_students.to_csv(os.path.dirname(__file__) + "\\Ramsey Students.csv", index=False)
+    ramsey_students.to_csv(os.path.dirname(__file__) + f"{os.sep}Ramsey Students.csv", index=False)
 
     ramsey_students.to_csv("Ramsey_Lookup_Table.csv", index=False)
     ramsey_trips.to_csv("Ramsey_All_Trips.csv", index=False)
@@ -111,6 +112,14 @@ def createS3Connection(profile, consulting=False):
     bucket = config[profile]["bucket"] if not consulting else "4mativ-couchdrop"
 
     return s3, bucket
+
+
+def getProductDataFromXWeeksAgo(weeks_back=1, report_type="all_trips", start_date=datetime.today()):
+
+    # Get the monday of the earliest week we want to send data about
+    monday_of_week = start_date - DateOffset(days=start_date.weekday() + 7 * weeks_back)
+
+    return getNewProductData(report_type, monday_of_week)
 
 
 def getNewProductData(report_type="all_trips", pull_date=datetime.now() - DateOffset(days=datetime.now().weekday())):
@@ -659,10 +668,10 @@ def updateSchools():
 
     dw_report = dw_report.drop_duplicates()
 
-    dw_report.to_csv(f"{data_ops_drive}\\Databases\\All_TOMS_schools.csv", index=False)
+    dw_report.to_csv(os.path.join(data_ops_drive, "Databases","All_TOMS_schools.csv"), index=False)
 
     dw_report = dw_report[dw_report["Archived"].isna()]
-    dw_report.to_csv(f"{data_ops_drive}\\Databases\\TOMS_schools.csv", index=False)
+    dw_report.to_csv(os.path.join(data_ops_drive, "Databases","TOMS_schools.csv"), index=False)
 
 
 def approximateLastMonthDataFromWarehouse(report_type="all_trips", profile="prod"):
