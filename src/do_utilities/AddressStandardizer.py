@@ -260,8 +260,8 @@ def convertAddress(address_string, street_only=False):
         return ""
 
     address_string = address_string.replace("  ", " ")
-
-    address_string = address_string.title()
+    address_string = address_string.replace(".0", "")
+    # address_string = address_string.title()
 
     # Typically a "USA" is seen when the last part of the address is repeated, so remove
     # everything prior to it (if not duplicated, it just removes the

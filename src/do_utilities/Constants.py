@@ -237,6 +237,7 @@ data_template_columns = [
     "Transportation Status (Riding/Not Riding)",  # Riding, Riding (AM Only), Riding (PM Only), Not Riding
     "Grade",
     "Program",
+    "Dismissal Group (if applicable)",
     "Accomodations (select all that apply)",
     # Curb-to-Curb, Booster seat, Car seat, 5-point harness, Solo, Aide,
     # Wheelchair, Small vehicle, hand-to-hand, Visual Impairment, Hearing impairment, Non-verbal, Behavior plan,
