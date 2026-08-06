@@ -506,6 +506,9 @@ def cleanData(arr, min_date, max_date, report_type, filter_dates=True):
         if "name" in cur_col.lower():
             arr[cur_col] = [x.replace("`", "'").replace("’", "'") if x == x else x for x in arr[cur_col]]
 
+        if "program" in cur_col.lower():
+            arr.dropna(subset=[cur_col], inplace=True)
+        
         if "school" in cur_col.lower():
 
             # if report_type == "weekly_comms":
