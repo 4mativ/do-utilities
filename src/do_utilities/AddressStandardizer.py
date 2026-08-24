@@ -10,6 +10,9 @@ standard = getStandards()
 
 
 def streetAddressApproximatelyEqual(add1, add2, match_amount=85):
+    ## ADDITION TO MAKE CASE INSENSITIVE:
+    add1 = str(add1).strip().upper()
+    add2 = str(add2).strip().upper()
     return QRatio(add1, add2) >= match_amount
 
 
