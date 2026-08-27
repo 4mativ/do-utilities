@@ -37,9 +37,7 @@ def getDriveRoot():
         raise RuntimeError(f"Unsupported platform: {system}")
 
 
-google_drive_root = getDriveRoot()
-
-shared_drives = os.path.join(google_drive_root, "Shared drives")
+shared_drives = getDriveRoot()
 
 
 # A utility file that other scripts may import and use its common variables
