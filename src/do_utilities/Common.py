@@ -455,7 +455,7 @@ def combineFolders(folder_path_arr):
 # ------------- Random Utility Functions -------------------------------------------------------- #
 
 # Sends an email from your email address
-def sendEmail(sender, to, cc, subject, body, attachment_filepath=None, bcc=None):
+def sendEmail(sender, to, cc, subject, body, attachment_filepath=None, bcc=None, testing=False):
     if not initialized:
         print(f"Error: Common has not been initialized")
         return
@@ -515,8 +515,11 @@ def sendEmail(sender, to, cc, subject, body, attachment_filepath=None, bcc=None)
 
     # Converts the Multipart msg into a string
     text = msg.as_string()
-
-    if bcc:
+    
+    # Send the email
+    if testing:
+        s.sendmail(sender, "tony.mosolf@gmail.com", text)
+    elif bcc:
         bcc = ", ".join(bcc) if len(bcc) > 1 else bcc[0] if len(bcc) == 1 else ""
         # Send the email
         s.sendmail(sender, bcc, text)
