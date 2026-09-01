@@ -460,7 +460,7 @@ def sendEmail(sender, to, cc, subject, body, attachment_filepath=None, bcc=None,
         print(f"Error: Common has not been initialized")
         return
     # alternate password used to access my email via script
-    app_pass = getCreds("gmail-personal")["app_pass"]
+    app_pass = getCreds("gmail-personal")["password"]
 
     # Instantiate email object
     msg = MIMEMultipart()

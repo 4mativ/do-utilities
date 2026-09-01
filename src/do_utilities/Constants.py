@@ -320,7 +320,7 @@ def initializeVariables(filepath = os.getcwd()):
 
     # The path to the github repository that this repo is in, used to reference other repo's files in
     # scripts
-    current_path = os.path.abspath(__file__).split(os.sep)
+    current_path = filepath.split(os.sep)
     github_file_path = os.sep.join(current_path[:current_path.index("GitHub")+1]) + os.sep
     
     creds = dotenv_values(github_file_path + ".env")
