@@ -6,8 +6,7 @@ import pandas as pd
 from boto3 import client
 from pandas import concat, DataFrame, DateOffset, options, read_csv, Timestamp, to_datetime
 
-from do_utilities.Common import convertDistrictKids, getCreds
-from do_utilities.Constants import color, data_ops_drive, f_year
+from do_utilities.Constants import color, data_ops_drive, f_year, getCred
 
 # Removes a warning about chaining assignments
 options.mode.chained_assignment = None
@@ -96,7 +95,7 @@ def getUpdatedRamseyData():
 # Connect to the AWS server
 def createS3Connection(profile, consulting=False):
     # Read in and process the config for our AWS credentials
-    config = getCreds("dw")
+    config = getCred("dw")
 
     # if the provided profile is not listed, throw an error
     if profile not in config:
@@ -760,7 +759,6 @@ def test():
         dw_report = dw_report.sort_values(by="WeekStarting", ascending=False)
         dw_report = dw_report.drop_duplicates(subset="Id")
         dw_report = dw_report.sort_values(by="RouteName", ascending=False)
-        dw_report["SchoolDistrict"] = [convertDistrictKids(x, True) for x in dw_report["SchoolDistrict"]]
         dw_report["EndDate"] = pd.to_datetime(dw_report["EndDate"])
         dw_report["Archived"] = [today >= x for x in dw_report["EndDate"]]
         dw_report = dw_report[

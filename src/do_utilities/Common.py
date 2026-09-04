@@ -6,14 +6,10 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from glob import glob
-from json import dumps
 from re import search, sub
 from shutil import copyfile, move, rmtree
 from smtplib import SMTP
 from tkinter import filedialog
-from traceback import format_exc
-from copy import deepcopy
-
 
 import pandas as pd
 from gspread import authorize
@@ -27,6 +23,7 @@ from rapidfuzz import process, fuzz
 # from Geocoding.GoogleApi import GetRoutedDistance, EquivalentAddresses
 from do_utilities.Constants import getStandards, getCred, data_ops_drive, initializeVariables
 from do_utilities.AddressStandardizer import convertAddress
+from do_utilities.QueryDataWarehouse import getDataForLastXWeeks
 
 options.mode.chained_assignment = None
 
@@ -36,7 +33,10 @@ standard = getStandards()
 
 # Ramsey County Foster and some other schools need to be treated as a single entity, so we need to
 # know all of the schools that fall under their umbrellas
-df_toms_schools = read_csv(os.path.join(data_ops_drive, "Databases","All_TOMS_schools.csv"))
+df_toms_schools = getDataForLastXWeeks(1, "schools")
+df_toms_schools = df_toms_schools.drop_duplicates()
+
+
 df_toms_schools["District Alpha"] = ""
 
 always_convert = [
