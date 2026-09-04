@@ -309,8 +309,6 @@ github_file_path = ""
 
 creds = {}
 
-# billing_dbs = {}
-
 invoicing_db_path = ""
 
 df_standardizations = DataFrame()
@@ -328,7 +326,11 @@ def initializeVariables(filepath = os.getcwd()):
         # The path to the github repository that this repo is in, used to reference other repo's files in
         # scripts
         current_path = filepath.split(os.sep)
-        github_file_path = os.sep.join(current_path[:current_path.index("GitHub") + 1]) + os.sep
+        try:
+            github_file_path = os.sep.join(current_path[:current_path.index("GitHub") + 1]) + os.sep
+        except:
+            print(f"Failed to find GitHub in {github_file_path}")
+            github_file_path = ""
         creds = dotenv_values(github_file_path + ".env")
 
     for cur in ["google-drive", "postgres", "qb", "gmail-personal", "dw", "twilio"]:
