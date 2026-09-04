@@ -42,7 +42,7 @@ def getDriveRoot():
 
 shared_drives = getDriveRoot()
 
-print(f"When run via GitHub Actions, shared_drives = {shared_drives}")
+# print(f"When run via GitHub Actions, shared_drives = {shared_drives}")
 
 # A utility file that other scripts may import and use its common variables
 shared_4mativ_drive = os.path.join(shared_drives, "4MATIV General")
@@ -314,10 +314,10 @@ creds = {}
 
 invoicing_db_path = ""
 
-df_standardizations = DataFrame()
+df_standardizations = pd.DataFrame(columns = ['Text', 'Abbreviation'])
 
-test = os.environ
-print(f"os.environ = \n\n{test}\n\n")
+# print(f"os.environ = \n\n{os.environ}\n\n")
+
 
 def initializeVariables(filepath = os.getcwd()):
     global github_file_path, creds, billing_dbs, invoicing_db_path, df_standardizations
@@ -328,9 +328,6 @@ def initializeVariables(filepath = os.getcwd()):
         creds = loads(os.environ["REPO_SECRET"])
         print(f"creds from repo = \n\n{creds}\n\n")
         
-        github_file_path = ""
-        invoicing_db_path = ""
-        df_standardizations = pd.DataFrame(columns=['Text', 'Abbreviation'])
     except:
         # The path to the github repository that this repo is in, used to reference other repo's files in
         # scripts
@@ -341,7 +338,7 @@ def initializeVariables(filepath = os.getcwd()):
             print(f"Failed to find GitHub in {github_file_path}")
             github_file_path = ""
         creds = dotenv_values(github_file_path + ".env")
-        print(f"creds from .env = \n\n{creds}\n\n")
+        # print(f"creds from .env = \n\n{creds}\n\n")
 
         for cur in ["google-drive", "postgres", "qb", "gmail-personal", "dw", "twilio"]:
             creds[cur] = [[x.replace(f"{cur.upper()}-", ""), creds[x]] for x in creds if f"{cur.upper()}" in x]
