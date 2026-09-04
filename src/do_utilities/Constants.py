@@ -323,7 +323,7 @@ def initializeVariables(filepath = os.getcwd()):
     
     try:
         creds = loads(os.environ["REPO_SECRET"])
-        print(f"creds = \n\n{creds}\n\n")
+        print(f"creds from repo = \n\n{creds}\n\n")
         
         github_file_path = ""
     except:
@@ -336,7 +336,7 @@ def initializeVariables(filepath = os.getcwd()):
             print(f"Failed to find GitHub in {github_file_path}")
             github_file_path = ""
         creds = dotenv_values(github_file_path + ".env")
-        print(f"creds = \n\n{creds}\n\n")
+        print(f"creds from .env = \n\n{creds}\n\n")
 
         for cur in ["google-drive", "postgres", "qb", "gmail-personal", "dw", "twilio"]:
             creds[cur] = [[x.replace(f"{cur.upper()}-", ""), creds[x]] for x in creds if f"{cur.upper()}" in x]
