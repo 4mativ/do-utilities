@@ -313,6 +313,8 @@ invoicing_db_path = ""
 
 df_standardizations = DataFrame()
 
+test = os.environ
+print(f"os.environ = \n\n{test}\n\n")
 
 def initializeVariables(filepath = os.getcwd()):
     global github_file_path, creds, billing_dbs, invoicing_db_path, df_standardizations
