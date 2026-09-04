@@ -28,7 +28,7 @@ jobs:
       - name: execute py script # run main.py
         env:
           REPO_SECRET: ${{ secrets.REPO_SECRET }}
-        run: python Constants.py
+        run: python src/do_utilities/Constants.py
 
       - name: commit files
         run: |
