@@ -28,8 +28,7 @@ jobs:
       - name: execute py script # run main.py
         env:
           REPO_SECRET: ${{ secrets.REPO_SECRET }}
-          TWILIO_CREDS: ${{ secrets.TWILIO_CREDS }}
-        run: python ScheduledTasks.py
+        run: python Constants.py
 
       - name: commit files
         run: |
