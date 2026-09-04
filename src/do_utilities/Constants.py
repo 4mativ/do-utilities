@@ -2,6 +2,8 @@ import os
 from collections import namedtuple
 from datetime import datetime
 from copy import deepcopy
+
+import pandas as pd
 from dotenv import dotenv_values
 from pandas import read_csv, DataFrame
 import platform
@@ -320,13 +322,15 @@ print(f"os.environ = \n\n{test}\n\n")
 def initializeVariables(filepath = os.getcwd()):
     global github_file_path, creds, billing_dbs, invoicing_db_path, df_standardizations
 
-    
+    creds = {}
     
     try:
         creds = loads(os.environ["REPO_SECRET"])
         print(f"creds from repo = \n\n{creds}\n\n")
         
         github_file_path = ""
+        invoicing_db_path = ""
+        df_standardizations = pd.DataFrame(columns=['Text', 'Abbreviation'])
     except:
         # The path to the github repository that this repo is in, used to reference other repo's files in
         # scripts
@@ -354,27 +358,10 @@ def initializeVariables(filepath = os.getcwd()):
             "new": deepcopy(creds["dw-prod"]),
         }
         creds["dw"]["new"]["bucket"] = creds["DW-PROD-NEW-BUCKET"]
-    # scope_app = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    # cred = ServiceAccountCredentials.from_json_keyfile_dict(creds["google-drive"], scope_app)
-    # client = gspread.authorize(cred)
-    # billing_file = client.open_by_key(billing_doc_id)
-    # billing_sheets = billing_file.worksheets()
-    # for cur_sheet in billing_sheets:
-    #     name = cur_sheet.title
-    #     # Read in the filter as a df
-    #     df = DataFrame(cur_sheet.get_all_values())
-    #     # Make the first row values the column headers, then remove that row
-    #     df.columns = df.iloc[0]
-    #     df = df[1:]
-    #     if "Archive Date" in df.columns:
-    #         df["Archive Date"] = df["Archive Date"].astype(str)
-    #         df = df[df["Archive Date"] == ""]
-    #         df.reset_index(drop=True, inplace=True)
-    #     billing_dbs[name] = df
-    # Save the file path to the files in the InvoicingDB repo
-    invoicing_db_path = os.path.join(github_file_path, "Automation-Scripts", "Invoicing",
-        "InvoicingDBs") + os.path.sep
-    df_standardizations = read_csv(os.path.join(data_ops_drive, "Databases","Standardization.csv"))
+   
+        invoicing_db_path = os.path.join(github_file_path, "Automation-Scripts", "Invoicing",
+            "InvoicingDBs") + os.path.sep
+        df_standardizations = read_csv(os.path.join(data_ops_drive, "Databases","Standardization.csv"))
     
 
 def getCred(cred_name):
