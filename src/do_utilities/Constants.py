@@ -6,6 +6,7 @@ from dotenv import dotenv_values
 from pandas import read_csv, DataFrame
 import platform
 import glob
+from json import loads
 
 
 def getDriveRoot():
@@ -318,12 +319,18 @@ df_standardizations = DataFrame()
 def initializeVariables(filepath = os.getcwd()):
     global github_file_path, creds, billing_dbs, invoicing_db_path, df_standardizations
 
-    # The path to the github repository that this repo is in, used to reference other repo's files in
-    # scripts
-    current_path = filepath.split(os.sep)
-    github_file_path = os.sep.join(current_path[:current_path.index("GitHub")+1]) + os.sep
     
-    creds = dotenv_values(github_file_path + ".env")
+    
+    try:
+        creds = loads(os.environ["REPO_SECRET"])
+        github_file_path = ""
+    except:
+        # The path to the github repository that this repo is in, used to reference other repo's files in
+        # scripts
+        current_path = filepath.split(os.sep)
+        github_file_path = os.sep.join(current_path[:current_path.index("GitHub") + 1]) + os.sep
+        creds = dotenv_values(github_file_path + ".env")
+
     for cur in ["google-drive", "postgres", "qb", "gmail-personal", "dw", "twilio"]:
         creds[cur] = [[x.replace(f"{cur.upper()}-", ""), creds[x]] for x in creds if f"{cur.upper()}" in x]
 
