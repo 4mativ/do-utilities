@@ -40,6 +40,7 @@ def getDriveRoot():
 
 shared_drives = getDriveRoot()
 
+print(f"When run via GitHub Actions, shared_drives = {shared_drives}")
 
 # A utility file that other scripts may import and use its common variables
 shared_4mativ_drive = os.path.join(shared_drives, "4MATIV General")
