@@ -326,7 +326,7 @@ def initializeVariables(filepath = os.getcwd()):
     
     try:
         creds = loads(os.environ["REPO_SECRET"])
-        print(f"creds from repo = \n\n{creds}\n\n")
+        # print(f"creds from repo = \n\n{creds}\n\n")
         
     except:
         # The path to the github repository that this repo is in, used to reference other repo's files in
