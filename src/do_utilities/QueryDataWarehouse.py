@@ -208,7 +208,18 @@ def getNewProductData(report_type="all_trips", pull_date=datetime.now() - DateOf
         quit(1)
 
 
-def getDataForLastXWeeks(weeks_back, report_type="all_trips", offset_weeks=0):
+def getDataForThePreviousXWeeks(start_date=datetime.today(), weeks_back=1, report_type="all_trips"):
+
+    # Get the monday of the earliest week we want to send data about
+    earliest_week_monday = start_date - DateOffset(days=start_date.weekday() + 7 * weeks_back)
+
+    # Get the last friday
+    last_week_friday = start_date - DateOffset(days=start_date.weekday() + 3)
+
+    return getDataFromWarehouse(earliest_week_monday, last_week_friday, report_type)
+
+
+def getDataForLastXWeeks(weeks_back=1, report_type="all_trips", offset_weeks=0):
     # Pull today's date to determine the mondays and friday we need
     today = datetime.now()
 
