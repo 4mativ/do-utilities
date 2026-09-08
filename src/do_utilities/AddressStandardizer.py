@@ -255,7 +255,7 @@ def convertAddress(address_string, street_only=False):
         initializeVariables()
         standard = getStandards()
         if standard.empty:
-            print(f"Error: Common has not been initialized, can't standardize addresses")
+            # print(f"Error: Common has not been initialized, can't standardize addresses")
             return ""
         
     # NAN check
