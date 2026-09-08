@@ -547,7 +547,8 @@ def cleanData(arr, min_date, max_date, report_type, filter_dates=True):
 
         if cur_col in ["TransportationVendor", "Vendor"]:
 
-            arr[cur_col].fillna("", inplace=True)
+            # arr[cur_col].fillna("", inplace=True)
+            arr.fillna({cur_col: ""}, inplace=True)
 
             conversions = {
                 "Assist": "Assist Services",
