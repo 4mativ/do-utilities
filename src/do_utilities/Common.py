@@ -33,7 +33,8 @@ standard = getStandards()
 
 # Ramsey County Foster and some other schools need to be treated as a single entity, so we need to
 # know all of the schools that fall under their umbrellas
-df_toms_schools = getDataForLastXWeeks(1, "schools")
+try:
+    df_toms_schools = getDataForLastXWeeks(1, "schools")
 df_toms_schools = df_toms_schools.drop_duplicates()
 
 
@@ -909,7 +910,7 @@ def compareToSchools(string_to_comp, field_to_comp, fields_to_return=None):
     values = list(df_toms_schools[field_to_comp].unique())
 
     for cur_value in values:
-        if cur_value.title() == string_to_comp.title():
+        if str(cur_value).title() == string_to_comp.title():
             found = True
             for i in range(len(fields_to_return)):
                 return_value.append(
