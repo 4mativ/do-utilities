@@ -33,8 +33,7 @@ standard = getStandards()
 
 # Ramsey County Foster and some other schools need to be treated as a single entity, so we need to
 # know all of the schools that fall under their umbrellas
-try:
-    df_toms_schools = getDataForLastXWeeks(1, "schools")
+df_toms_schools = getDataForLastXWeeks(1, "schools")
 df_toms_schools = df_toms_schools.drop_duplicates()
 
 
