@@ -6,7 +6,10 @@ import pandas as pd
 from boto3 import client
 from pandas import concat, DataFrame, DateOffset, options, read_csv, Timestamp, to_datetime
 
-from do_utilities.Constants import color, data_ops_drive, f_year, getCred
+try:
+    from do_utilities.Constants import color, data_ops_drive, f_year, getCred
+except:
+    from Constants import color, data_ops_drive, f_year, getCred
 
 # Removes a warning about chaining assignments
 options.mode.chained_assignment = None
@@ -718,8 +721,8 @@ def approximateLastMonthDataFromWarehouse(report_type="all_trips", profile="prod
 # Test the system and save a copy of the pulled data locally, this script is mainly intended to
 # have its functions be called by other scripts
 def test():
-    start_date = datetime(2026, 2, 2)
-    max_date = datetime(2026, 2, 6)
+    start_date = datetime(2025, 9, 3)
+    max_date = datetime(2025, 9, 3)
 
     updateSchools()
 
@@ -739,11 +742,11 @@ def test():
         "old_curb",
     ]
 
-    report_type = "schools"
+    report_type = "all_trips"
 
     os.chdir(os.path.dirname(__file__))
 
-    selection = 2
+    selection = 0
 
     if selection == 0:
         dw_report = getDataFromWarehouse(start_date, max_date, report_type)

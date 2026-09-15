@@ -21,9 +21,14 @@ from anglicize import anglicize
 from rapidfuzz import process, fuzz
 
 # from Geocoding.GoogleApi import GetRoutedDistance, EquivalentAddresses
-from do_utilities.Constants import getStandards, getCred, data_ops_drive, initializeVariables
-from do_utilities.AddressStandardizer import convertAddress
-from do_utilities.QueryDataWarehouse import getDataForLastXWeeks
+try:
+    from do_utilities.Constants import getStandards, getCred, data_ops_drive, initializeVariables
+    from do_utilities.AddressStandardizer import convertAddress
+    from do_utilities.QueryDataWarehouse import getDataForLastXWeeks
+except:
+    from  Constants import getStandards, getCred, data_ops_drive, initializeVariables
+    from AddressStandardizer import convertAddress
+    from QueryDataWarehouse import getDataForLastXWeeks
 
 options.mode.chained_assignment = None
 
@@ -132,7 +137,7 @@ df_accounts = pd.DataFrame(
 
 
 def initialize(filepath = os.getcwd()):
-    global df_toms_schools, initialized
+    global df_toms_schools, initialized, df_accounts
 
     initializeVariables(filepath)
     # Data for accessing the Google sheets file with account managers

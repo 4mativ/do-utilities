@@ -4,7 +4,11 @@ from string import capwords
 from usaddress import tag
 from rapidfuzz.fuzz import QRatio
 
-from do_utilities.Constants import getStandards, initializeVariables
+try:
+    from do_utilities.Constants import getStandards, initializeVariables
+except:
+    from Constants import getStandards, initializeVariables
+
 
 standard = getStandards()
 
