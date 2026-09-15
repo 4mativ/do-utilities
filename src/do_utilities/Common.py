@@ -254,6 +254,11 @@ def getSchoolDF():
     return df_toms_schools
 
 
+# Get the account df
+def getAccountDF():
+    return df_accounts
+
+
 # Get the QBR filepath for saving, file path is State\Districts or Individual\Alpha\
 def getSchoolMatrixRegionPath(alpha):
     state = getStateFromAlphaOrName(alpha)
