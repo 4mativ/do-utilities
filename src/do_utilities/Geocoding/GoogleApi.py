@@ -636,7 +636,7 @@ def equivalentAddresses(add1, add2):
 
 
 # Call the google api to convert lat longs to an address
-def ReverseGeocode(lat, long, save=True):
+def reverseGeocode(lat, long, save=True):
     # Check if this exists in the database already, and return the lat/longs if so
     start_address = query_db[(query_db["Lat1"] == lat) & (query_db["Long1"] == long) & (query_db["Route"] == "Geocode")]
     if len(start_address) > 0:
@@ -706,6 +706,63 @@ def updateQueryDB(queries=pd.DataFrame()):
         query_db = query_db.drop_duplicates()
     except Exception:
         pass
+
+
+def getCleanAddress(address):
+    global query_db
+    if address in [None, "", nan, "nan"]:
+        return ""
+    
+    address = address.replace(".0", "")
+    
+    address = address.replace(", USA", "")
+    # Check if this exists in the database already, and return the lat/longs if so
+    start_address = query_db[(query_db["Route"] == "Geocode") &
+                             ((query_db["Stop1"] == address) | (query_db["Stop2"] == address))
+    ]
+    if len(start_address) > 0:
+        return start_address["Stop2"].mode()[0]
+    
+    print(f"Looking up address: {address}")
+    
+    # Apply parameter for google api query
+    gparams["address"] = address
+    
+    # Query the api
+    r = requests.get(geo_api, params = gparams)
+    
+    # request was successfully returned
+    if r.status_code == 200:
+        
+        # Find the data we want from the response data
+        data = r.json()
+        results = data["results"]
+        if len(results) > 0:
+            # Get coordinates from response data
+            coords = results[0]["geometry"]["location"]
+            returned_address = results[0]["formatted_address"]
+            lat_long = (coords["lat"], coords["lng"])
+            
+            if coords["lat"] == 0 and coords["lng"] == 0:
+                print(f"Failed to generate a real geocode for {address}")
+                quit(1)
+            
+            # Add the query to the end of the database, store as a trip to itself
+            query_db.loc[len(query_db.index)] = [coords["lat"], coords["lng"], address,
+                coords["lat"],
+                coords["lng"], returned_address, 0, "Geocode", "Geocode", ]
+            
+            # save the updated query_db
+            os.chdir(os.path.dirname(__file__))
+            query_db.to_csv("QueryDB.csv", index = False)
+        else:
+            print(f"Google failed to lookup '{address}")
+            quit(1)
+    
+    else:
+        print(f"Failed to lookup '{address}' via the Google Maps API")
+        quit(1)
+    return returned_address
 
 
 def main():

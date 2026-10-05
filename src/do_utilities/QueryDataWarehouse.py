@@ -151,7 +151,7 @@ def getNewProductData(report_type="all_trips", pull_date=datetime.now() - DateOf
     pull_date = pull_date.strftime("%m.%d.%Y")
 
     # Request the files from the s3 origin's bucket
-    response = s3.list_objects_v2(Bucket=bucket, Prefix=f"{pull_date}/")
+    response = s3.list_objects_v2(Bucket=bucket, Prefix=f"{pull_date}{os.sep}")
 
     old_curb = []
     new_curb = []
@@ -193,10 +193,10 @@ def getNewProductData(report_type="all_trips", pull_date=datetime.now() - DateOf
                 else:
                     print(f"Not sure what this file is: {cur_file_path}")
             else:
-                print(f"Couldn't successfully access {cur_file_path.split('/')[1]}")
+                print(f"Couldn't successfully access {cur_file_path.split(os.sep)[1]}")
 
         except:
-            print(f"Error processing: {cur_file_path.split('/')[1]}")
+            print(f"Error processing: {cur_file_path.split(os.sep)[1]}")
 
     if report_type == "all_trips":
         return cleanData(all_trips, datetime.now(), datetime.now(), "all_trips", False)
@@ -273,7 +273,7 @@ def getWeeklyDataFromWarehouse(
         # -month2.day2.year2-report_type.csv"
         # Where the first date is a monday and the second is the following sunday
         file_path = min_string + "-" + mid_string
-        file_path = file_path + "/" + file_path + "-" + report_type + ".csv"
+        file_path = file_path + os.sep + file_path + "-" + report_type + ".csv"
 
         try:
             # Request the month's file from the s3 origin's bucket
@@ -338,7 +338,7 @@ def getDailyDataFromWarehouse(
     date_string = date_of_data.strftime("%m.%d.%Y")
 
     # Files are stored in filepath "month.day.year/month.day.year-report_type.csv
-    file_path = date_string + "/" + date_string + "-" + report_type + ".csv"
+    file_path = date_string + os.sep + date_string + "-" + report_type + ".csv"
 
     try:
         # Request the month's file from the s3 origin's bucket
@@ -453,7 +453,7 @@ def getDataFromWarehouse(
 
         # Files are stored in filepath month-year/month-year-report_type.csv
         file_path = "{:02d}".format(local_min) + "-" + str(min_year)
-        file_path = file_path + "/" + file_path + "-" + report_type + ".csv"
+        file_path = file_path + os.sep + file_path + "-" + report_type + ".csv"
 
         try:
             # Request the month's file from the s3 origin's bucket

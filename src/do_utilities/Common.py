@@ -19,16 +19,21 @@ from pandas import concat, DataFrame, ExcelFile, options, read_csv, read_excel
 from pydrive2.auth import GoogleAuth
 from anglicize import anglicize
 from rapidfuzz import process, fuzz
+from copy import deepcopy
 
-# from Geocoding.GoogleApi import GetRoutedDistance, EquivalentAddresses
+# from Geocoding.GoogleApi import GetRoutedDistance, equivalentAddresses
 try:
     from do_utilities.Constants import getStandards, getCred, data_ops_drive, initializeVariables
     from do_utilities.AddressStandardizer import convertAddress
     from do_utilities.QueryDataWarehouse import getDataForLastXWeeks
+    from do_utilities.Geocoding.GoogleApi import getRoutedDistance, equivalentAddresses
+
 except:
     from  Constants import getStandards, getCred, data_ops_drive, initializeVariables
     from AddressStandardizer import convertAddress
     from QueryDataWarehouse import getDataForLastXWeeks
+    from Geocoding.GoogleApi import getRoutedDistance, equivalentAddresses
+
 
 options.mode.chained_assignment = None
 
@@ -266,6 +271,7 @@ def getSchoolMatrixRegionPath(alpha):
         print(f"Failed to find state for: {alpha}")
         quit(1)
     return f"{os.sep}{state}{os.sep}{alpha}{os.sep}"
+
 
 # Get the QBR filepath for saving, file path is State\Alpha\
 def getSchoolSharedFolderPath(alpha):
@@ -585,6 +591,7 @@ def generateRequirementsFile(move_locations = True):
     except Exception:
         print("Failed to generate new reqiurements file")
 
+
 # Gets the credential values for various APIs
 def getCreds(cred_name):
     return getCred(cred_name)
@@ -744,7 +751,6 @@ def queryAdddressInTOMS(address, school_alpha="", coords="", return_candidates=F
         return [address] if return_candidates else address
 
 
-
 # ------------- Data Cleaning ----------------------- #
 
 # Fix most common syntax issues
@@ -888,7 +894,6 @@ def standardizeRouteName(route_name):
     arr = [entry for entry in arr if entry == entry and entry != ""]
 
     return "_".join(arr).replace(" ", "")
-
 
 
 # ------------- School Data Lookup ----------------------- #
@@ -1087,6 +1092,7 @@ def getSchoolFromAlpha(alpha):
 def isValidTomsData(val, column):
     return val in df_toms_schools[column].unique()
 
+
 # Get the address for a specific school
 def getSchoolAddress(school_name):
     return compareToSchools(school_name, "School", ["Street"])[0]
@@ -1199,6 +1205,197 @@ def fuzzyMatchSchool(given_name, cutoff=90):
     if match:
         return df_toms_schools.iloc[match[2]]["School"]
     return given_name
+
+
+# Merge two json objects, using the first as the base/authority. Provide any required unique keys to ensure dupes
+# are removed
+# When using for DataTemplateToTOMS, base = template, addition = TOMS
+def mergeJson(local_base, local_addition, unique_keys, extract_names_only=False):
+
+    if extract_names_only:
+        try:
+            unique_keys.remove("name")
+        except:
+            pass
+
+    # Avoiding dealing with copy-on-write issues
+    base = deepcopy(local_base)
+    addition = deepcopy(local_addition)
+
+    if not base or len(base) == 0:
+        return
+
+    if len(addition) == 0:
+        for key in unique_keys:
+            final_base = []
+            base_values = [x[key] for x in base]
+            if key == "address":
+                base_values = [convertAddress(x) for x in base_values]
+                for i in range(len(base_values)):
+                    unique = True
+                    for j in range(i + 1, len(base_values)):
+                        if equivalentAddresses(base_values[i], base_values[j]):
+                            unique = False
+                    if unique:
+                        final_base.append(deepcopy(base[i]))
+                base = deepcopy(final_base)
+            else:
+                if len(base_values) != len(set(base_values)):
+                    for i in range(len(base)):
+                        try:
+                            if base_values[i] not in base_values[i + 1 :]:
+                                final_base.append(deepcopy(base[i]))
+                        except:
+                            if i == len(base) - 1 and base_values[i] in base_values[:i]:
+                                final_base.append(deepcopy(base[i]))
+                    if len(final_base) == len(set(base_values)):
+                        base = deepcopy(final_base)
+                    else:
+                        pass
+        return base
+
+    base_entries = [x["name"] for x in base]
+    base_has_primary = len(base_entries) > 0
+
+    if len(base_entries) != len(set(base_entries)):
+        if "name" in unique_keys:
+            print("There are duplicate names in base", base)
+
+    for i in range(len(addition)):
+        wiped = False
+        try:
+            if base_has_primary:
+                addition[i]["primary"] = False if addition[i]["primary"] is bool else "False"
+        except:
+            pass
+
+        if "name" not in unique_keys:
+            match = process.extractOne(addition[i]["name"], base_entries, score_cutoff=90)
+            if match:
+                if extract_names_only:
+                    if addition[i]["name"] in base_entries:
+                        pass
+                    else:
+                        base[match[2]]["name"] = (
+                            addition[i]["name"] if "Unknown" in addition[i]["name"] else base[match[2]]["name"]
+                        )
+                # addition[i]["name"] += "_new"
+
+        for key in unique_keys:
+            if wiped:
+                continue
+            base_values = [x[key] for x in base]
+            if key == "address":
+                base_values = [convertAddress(x) for x in base_values]
+                addition[i][key] = convertAddress(addition[i][key])
+                for j in range(len(base_values)):
+                    if wiped:
+                        continue
+                    elif equivalentAddresses(base_values[j], addition[i][key]):
+                        base[j]["name"] = deepcopy(addition[i]["name"])
+                        for cur_key in unique_keys:
+                            base[j][cur_key] = deepcopy(addition[i][cur_key])
+                        addition[i] = nan
+                        wiped = True
+            else:
+                if wiped:
+                    continue
+                if len(base_values) != len(set(base_values)):
+                    print(f"There are duplicate {key} keys in the base json", base)
+                match = process.extractOne(addition[i][key], base_values, score_cutoff=90)
+                if match:
+                    base[match[2]]["name"] = deepcopy(addition[i]["name"])
+                    for cur_key in unique_keys:
+                        base[match[2]][cur_key] = deepcopy(addition[i][cur_key])
+                    addition[i] = nan
+
+        if wiped:
+            continue
+
+    addition = [x for x in addition if x == x]
+
+    if not extract_names_only:
+        base += addition
+
+    try:
+        base.remove(nan)
+    except:
+        pass
+
+    if len(base) > 0:
+        primary_test = [x["primary"] for x in base]
+        if "True" not in primary_test and True not in primary_test:
+            base[0]["primary"] = True if base[0]["primary"] is bool else "True"
+
+        primary_test = [x["primary"] for x in base]
+        if "true" != str(primary_test[0]).lower():
+            primary = [nan]
+            for i in range(len(base)):
+                if "true" == str(primary_test[i]).lower():
+                    primary = [deepcopy(base[i])]
+                    base.pop(i)
+                    break
+            base = primary + base
+
+    try:
+        base.remove(nan)
+    except:
+        pass
+
+    return base
+
+
+def convertToDollars(amount):
+    if amount != amount:
+        return ""
+    return "${:,.2f}".format(amount)
+
+
+def compareSets(a, b):
+    
+    results = {}
+    a = set(a)
+    b = set(b)
+    
+    results['A'] = a
+    results['B'] = b
+    results['A-B'] = a.difference(b)  # a-b
+    results['B-A'] = b.difference(a)  # b-a
+    results['A&B'] = a.intersection(b)  # a&b
+    results['A|B'] = a.union(b)  # a|b
+    results['A|B-A&B'] = a.symmetric_difference(b)  # a^b
+    
+    return results
+
+
+def standardizeMode(mode_text):
+    
+    if mode_text != mode_text:
+        return ""
+    
+    if mode_text == "FieldTrip":
+        return mode_text
+    
+    # ESY is the only all caps mode
+    if mode_text.lower() == "esy":
+        return mode_text.upper()
+    
+    mode_text = mode_text.title()
+    
+    # WC and SPED should be all caps
+    for cur in ['Wc ', 'Sped ']:
+        mode_text = mode_text.replace(cur, cur.upper())
+    
+    # Miles & hours are allowed to be plural
+    if 'Miles' in mode_text or 'Hours' in mode_text:
+        # Changing from extra to excess to align with contract verbiage
+        mode_text = mode_text.replace("Extra", "Excess ")
+    
+    # Make singular if not 'Bus'
+    elif mode_text[-1] == "s" and mode_text[-3:] != "Bus":
+        mode_text = mode_text[:-1]
+    
+    return mode_text
 
 
 initialize()
