@@ -17,9 +17,10 @@ os.chdir(os.path.dirname(__file__))
 
 # Google Geocoder API Parameters
 geo_api = "https://maps.googleapis.com/maps/api/geocode/json"
-gparams = {"key": creds["GOOGLE-MAPS-GKEY"]}
+GMAPS_KEY = creds.get("GOOGLE-MAPS-GKEY", "")
+gparams = {"key": GMAPS_KEY}
 
-gmaps = googlemaps.Client(key=creds["GOOGLE-MAPS-GKEY"])
+gmaps = googlemaps.Client(key=GMAPS_KEY) if GMAPS_KEY else None
 
 # Route finding requires calling a slightly different endpoint
 route_api = "https://maps.googleapis.com/maps/api/directions/json"
