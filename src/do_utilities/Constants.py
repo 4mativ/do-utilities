@@ -338,27 +338,31 @@ def initializeVariables(filepath = os.getcwd()):
             print(f"Failed to find GitHub in {github_file_path}")
             github_file_path = ""
         creds = dotenv_values(github_file_path + ".env")
-        # print(f"creds from .env = \n\n{creds}\n\n")
+        invoicing_db_path = os.path.join(
+            github_file_path, "Automation-Scripts", "Invoicing",
+            "InvoicingDBs"
+        ) + os.path.sep
+        df_standardizations = read_csv(
+            os.path.join(data_ops_drive, "Databases", "Standardization.csv")
+        )
 
-        for cur in ["google-drive", "postgres", "qb", "gmail-personal", "dw", "twilio"]:
-            creds[cur] = [[x.replace(f"{cur.upper()}-", ""), creds[x]] for x in creds if f"{cur.upper()}" in x]
-    
-            creds[cur] = dict([(str(x[0]).lower(), x[1]) for x in creds[cur]])
-        for cur in ["staging", "prod"]:
-            creds[f"dw-{cur}"] = [
-                [x.replace(f"{cur}-", ""), creds["dw"][x]] for x in creds["dw"] if f"{cur}" in x and "new" not in x
-            ]
-            creds[f"dw-{cur}"] = dict([(str(x[0]).lower(), x[1]) for x in creds[f"dw-{cur}"]])
-        creds["dw"] = {
-            "staging": creds["dw-staging"],
-            "prod": creds["dw-prod"],
-            "new": deepcopy(creds["dw-prod"]),
-        }
-        creds["dw"]["new"]["bucket"] = creds["DW-PROD-NEW-BUCKET"]
+    for cur in ["google-drive", "postgres", "qb", "gmail-personal", "dw", "twilio"]:
+        creds[cur] = [[x.replace(f"{cur.upper()}-", ""), creds[x]] for x in creds if f"{cur.upper()}" in x]
+
+        creds[cur] = dict([(str(x[0]).lower(), x[1]) for x in creds[cur]])
+    for cur in ["staging", "prod"]:
+        creds[f"dw-{cur}"] = [
+            [x.replace(f"{cur}-", ""), creds["dw"][x]] for x in creds["dw"] if f"{cur}" in x and "new" not in x
+        ]
+        creds[f"dw-{cur}"] = dict([(str(x[0]).lower(), x[1]) for x in creds[f"dw-{cur}"]])
+    creds["dw"] = {
+        "staging": creds["dw-staging"],
+        "prod": creds["dw-prod"],
+        "new": deepcopy(creds["dw-prod"]),
+    }
+    creds["dw"]["new"]["bucket"] = creds["DW-PROD-NEW-BUCKET"]
    
-        invoicing_db_path = os.path.join(github_file_path, "Automation-Scripts", "Invoicing",
-            "InvoicingDBs") + os.path.sep
-        df_standardizations = read_csv(os.path.join(data_ops_drive, "Databases","Standardization.csv"))
+    
     
 
 def getCred(cred_name):

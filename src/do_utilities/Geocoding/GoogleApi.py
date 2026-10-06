@@ -9,15 +9,19 @@ from googlemaps.convert import decode_polyline
 from googlemaps.directions import directions
 from numpy import nan
 
-from do_utilities.Constants import creds
 import time
 
+try:
+    from do_utilities.Constants import creds
+except:
+    from ..Constants import creds
+    
 # Move to the current folder to read and write locally
 os.chdir(os.path.dirname(__file__))
 
 # Google Geocoder API Parameters
 geo_api = "https://maps.googleapis.com/maps/api/geocode/json"
-GMAPS_KEY = creds.get("GOOGLE-MAPS-GKEY", "")
+GMAPS_KEY = creds["GOOGLE-MAPS-GKEY"]
 gparams = {"key": GMAPS_KEY}
 
 gmaps = googlemaps.Client(key=GMAPS_KEY) if GMAPS_KEY else None

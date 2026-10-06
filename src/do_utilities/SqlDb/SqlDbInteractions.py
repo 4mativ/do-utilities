@@ -7,11 +7,17 @@ from pandas import to_datetime
 import numpy as np
 
 import SqlTableVariables as variables
-from do_utilities.Common import generateMasterFile, getCreds, getInput, convertDistrictKids
-from do_utilities.Constants import f_year
+
 from google.cloud import bigquery
 from google.oauth2 import service_account
 from datetime import datetime
+
+try:
+    from do_utilities.Common import generateMasterFile, getCreds, getInput, convertDistrictKids
+    from do_utilities.Constants import f_year
+except:
+    from ..Common import generateMasterFile, getCreds, getInput, convertDistrictKids
+    from ..Constants import f_year
 
 # BigQuery access data
 credentials = service_account.Credentials.from_service_account_info(getCreds("google-drive"))
