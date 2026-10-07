@@ -7,7 +7,7 @@ from rapidfuzz.fuzz import QRatio
 try:
     from do_utilities.Constants import getStandards, initializeVariables
 except:
-    from Constants import getStandards, initializeVariables
+    from .Constants import getStandards, initializeVariables
 
 
 standard = getStandards()
