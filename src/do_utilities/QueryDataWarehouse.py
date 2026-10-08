@@ -88,7 +88,7 @@ def getUpdatedRamseyData():
                 f"{ramsey_students['School'].loc[ramsey_students['Student Name']==cur_dupe].unique()}\n"
             )
 
-    ramsey_students.to_csv(os.path.dirname(__file__) + f"{os.sep}Ramsey Students.csv", index=False)
+    ramsey_students.to_csv(os.path.join(os.path.dirname(__file__), "Ramsey Students.csv"), index=False)
 
     ramsey_students.to_csv("Ramsey_Lookup_Table.csv", index=False)
     ramsey_trips.to_csv("Ramsey_All_Trips.csv", index=False)
@@ -151,7 +151,7 @@ def getNewProductData(report_type="all_trips", pull_date=datetime.now() - DateOf
     pull_date = pull_date.strftime("%m.%d.%Y")
 
     # Request the files from the s3 origin's bucket
-    response = s3.list_objects_v2(Bucket=bucket, Prefix=f"{pull_date}{os.sep}")
+    response = s3.list_objects_v2(Bucket=bucket, Prefix=f"{pull_date}/")
 
     old_curb = []
     new_curb = []
@@ -273,7 +273,7 @@ def getWeeklyDataFromWarehouse(
         # -month2.day2.year2-report_type.csv"
         # Where the first date is a monday and the second is the following sunday
         file_path = min_string + "-" + mid_string
-        file_path = file_path + os.sep + file_path + "-" + report_type + ".csv"
+        file_path = f"{file_path}/{file_path}-{report_type}.csv"
 
         try:
             # Request the month's file from the s3 origin's bucket
@@ -310,8 +310,9 @@ def getWeeklyDataFromWarehouse(
 
             # Combine current week's report to the master data frame
             arr = concat([arr, test], ignore_index=True)
-        except Exception:
+        except Exception as ex:
             # Failed to get response from s3
+            print(ex)
             print(
                 f"Double check that the data warehouse bucket, {bucket}, houses the desired report "
                 f"at this filepath: {file_path}"
@@ -338,7 +339,7 @@ def getDailyDataFromWarehouse(
     date_string = date_of_data.strftime("%m.%d.%Y")
 
     # Files are stored in filepath "month.day.year/month.day.year-report_type.csv
-    file_path = date_string + os.sep + date_string + "-" + report_type + ".csv"
+    file_path = f"{date_string}/{date_string}-{report_type}.csv"
 
     try:
         # Request the month's file from the s3 origin's bucket
@@ -357,8 +358,9 @@ def getDailyDataFromWarehouse(
                 f"at this filepath: {file_path}"
             )
 
-    except Exception:
+    except Exception as ex:
         # Failed to get response from s3
+        print(ex)
         print(
             f"Double check that the data warehouse bucket, {bucket}, houses the desired report at "
             f"this filepath: {file_path}"
@@ -453,7 +455,7 @@ def getDataFromWarehouse(
 
         # Files are stored in filepath month-year/month-year-report_type.csv
         file_path = "{:02d}".format(local_min) + "-" + str(min_year)
-        file_path = file_path + os.sep + file_path + "-" + report_type + ".csv"
+        file_path = f"{file_path}/{file_path}-{report_type}.csv"
 
         try:
             # Request the month's file from the s3 origin's bucket
@@ -472,7 +474,8 @@ def getDataFromWarehouse(
                     f"Double check that the data warehouse bucket, {bucket}, houses the desired "
                     f"report at this filepath: {file_path}"
                 )
-        except Exception:
+        except Exception as ex:
+            print(ex)
             print(
                 f"Double check that the data warehouse bucket, {bucket}, houses the desired report "
                 f"at this filepath: {file_path}"
@@ -498,6 +501,7 @@ def getDataFromWarehouse(
     arr = cleanData(arr, start_of_current_week, max_date, report_type)
 
     return arr.reset_index(drop=True)
+
 
 
 def cleanData(arr, min_date, max_date, report_type, filter_dates=True):
@@ -724,7 +728,7 @@ def test():
     start_date = datetime(2025, 9, 3)
     max_date = datetime(2025, 9, 3)
 
-    updateSchools()
+    # updateSchools()
 
     all_report_types = [
         "adm",
@@ -746,7 +750,7 @@ def test():
 
     os.chdir(os.path.dirname(__file__))
 
-    selection = 0
+    selection = 2
 
     if selection == 0:
         dw_report = getDataFromWarehouse(start_date, max_date, report_type)

@@ -29,7 +29,7 @@ try:
     from do_utilities.Geocoding.GoogleApi import getRoutedDistance, equivalentAddresses
 
 except:
-    from  Constants import getStandards, getCred, data_ops_drive, initializeVariables
+    from Constants import getStandards, getCred, data_ops_drive, initializeVariables
     from AddressStandardizer import convertAddress
     from QueryDataWarehouse import getDataForLastXWeeks
     from Geocoding.GoogleApi import getRoutedDistance, equivalentAddresses
@@ -140,6 +140,32 @@ df_accounts = pd.DataFrame(
             ],
         )
 
+df_vendors = pd.DataFrame(
+            [],
+            columns=[
+                "Name",
+                "Region",
+                "Internal Status",
+                "Bus",
+                "Van",
+                "Cab",
+                "Field Trips",
+                "Primary Contact Name",
+                "Primary Email",
+                "Primary Phone",
+                "Secondary Contact",
+                "Secondary Email",
+                "Secondary Phone",
+                "Field Trip Email",
+                "Invoicing Emails",
+                "Name in URL Format",
+                "Approved Extra Emails",
+                "Contacted"
+                "Notes",
+                "Searchable Name",
+                "TOMS ID"
+            ],
+        )
 
 def initialize(filepath = os.getcwd()):
     global df_toms_schools, initialized, df_accounts
@@ -170,6 +196,17 @@ def initialize(filepath = os.getcwd()):
         # Make the first row values the column headers, then remove that row
         df_accounts.columns = df_accounts.iloc[0]
         df_accounts = df_accounts[1:]
+        
+        sheet_instance = g_sheet.get_worksheet(4)
+        # Read in the data as a df
+        df_vendors = DataFrame(sheet_instance.get_all_values())
+        
+        # Make the first row values the column headers, then remove that row
+        df_vendors.columns = df_vendors.iloc[0]
+        df_vendors = df_vendors[1:]
+        
+        df_vendors['TOMS ID'] = df_vendors['TOMS ID'].astype(int)
+        
     except Exception:
         print("Can't access Google sheets currently")
         df_accounts = pd.DataFrame(
@@ -193,6 +230,32 @@ def initialize(filepath = os.getcwd()):
                 "Searchable",
                 "Hotline",
                 "Hours Different from Central",
+            ],
+        )
+        df_vendors = pd.DataFrame(
+            [],
+            columns = [
+                "Name",
+                "Region",
+                "Internal Status",
+                "Bus",
+                "Van",
+                "Cab",
+                "Field Trips",
+                "Primary Contact Name",
+                "Primary Email",
+                "Primary Phone",
+                "Secondary Contact",
+                "Secondary Email",
+                "Secondary Phone",
+                "Field Trip Email",
+                "Invoicing Emails",
+                "Name in URL Format",
+                "Approved Extra Emails",
+                "Contacted"
+                "Notes",
+                "Searchable Name",
+                "TOMS ID"
             ],
         )
     
@@ -896,6 +959,13 @@ def standardizeRouteName(route_name):
     return "_".join(arr).replace(" ", "")
 
 
+def getCurrentVendorName(vendor_id):
+    if df_vendors.empty or vendor_id not in df_vendors['TOMS ID'].unique():
+        return ""
+    else:
+        return df_vendors.loc[df_vendors['TOMS ID'] == vendor_id, "Searchable Name"].max()
+    
+    
 # ------------- School Data Lookup ----------------------- #
 
 
