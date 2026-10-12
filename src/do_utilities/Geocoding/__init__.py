@@ -8,12 +8,12 @@ try:
 except Exception as e:
     print(f"Geocoding.BatchGeocode not loaded: {e!r}")
  
-try:
-    from . import GetDistanceToSchool
-except Exception as e:
-    print(f"Geocoding.GetDistanceToSchool not loaded: {e!r}")
- 
-try:
-    from . import GetWalkToStop
-except Exception as e:
-    print(f"Geocoding.GetWalkToStop not loaded: {e!r}")
+# try:
+#     from . import getDistanceToSchool
+# except Exception as e:
+#     print(f"Geocoding.GetDistanceToSchool not loaded: {e!r}")
+#
+# try:
+#     from . import getWalkToStop
+# except Exception as e:
+#     print(f"Geocoding.GetWalkToStop not loaded: {e!r}")
