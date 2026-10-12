@@ -503,8 +503,31 @@ def getDataFromWarehouse(
     return arr.reset_index(drop=True)
 
 
+def getCurrentVendorName(current_name, current_id, df_vendor):
+    if df_vendor.empty:
+        return current_name
+    try:
+        toms_name = df_vendor.loc[df_vendor['TOMS ID'] == current_id, "Name"].max()
+        df_temp = df_vendor[df_vendor['Name']==toms_name]
+        if len(df_temp) == 1:
+            return toms_name
+        else:
+            return df_vendor.loc[df_vendor['TOMS ID'] == current_id, "Searchable Name"].max()
+    except:
+        print(f"Failed to find a vendor with ID |{current_id}|")
+        return current_name
 
 def cleanData(arr, min_date, max_date, report_type, filter_dates=True):
+    
+    df_vendor = pd.DataFrame()
+    
+    if report_type == "all_trips":
+        try:
+            from do_utilities.Common import getVendors
+        except:
+            from Common import getVendors
+        
+        df_vendor = getVendors()
     # If the data is sorted by date, then filter to just the given date range, else remove
     # duplicates between months
     if "Date" in arr.columns:
@@ -553,6 +576,8 @@ def cleanData(arr, min_date, max_date, report_type, filter_dates=True):
             arr[cur_col] = [conver[x] if x in conver.keys() else str(x).title() for x in arr[cur_col]]
 
         if cur_col in ["TransportationVendor", "Vendor"]:
+            if "VendorId" in arr.columns:
+                arr[cur_col] = [getCurrentVendorName(x, y, df_vendor) for x, y in zip(arr[cur_col], arr['VendorId'])]
 
             # arr[cur_col].fillna("", inplace=True)
             arr.fillna({cur_col: ""}, inplace=True)

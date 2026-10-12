@@ -322,6 +322,9 @@ def getSchoolDF():
     return df_toms_schools
 
 
+def getVendors():
+    return df_vendors
+
 # Get the account df
 def getAccountsForDebugging():
     return df_accounts
