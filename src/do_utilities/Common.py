@@ -208,7 +208,7 @@ def initialize(filepath = os.getcwd()):
         df_vendors['TOMS ID'] = df_vendors['TOMS ID'].astype(int)
         
     except Exception:
-        print("Can't access Google sheets currently")
+        # print("Can't access Google sheets currently\n\n")
         df_accounts = pd.DataFrame(
             [],
             columns=[
