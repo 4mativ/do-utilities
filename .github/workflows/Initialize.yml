@@ -1,4 +1,4 @@
-name: run do_utilities/Constants.py
+name: Initialize on Main
 
 on:
   push:
