@@ -6,8 +6,6 @@ import pandas as pd
 from pandas import to_datetime
 import numpy as np
 
-import SqlTableVariables as variables
-
 from google.cloud import bigquery
 from google.oauth2 import service_account
 from datetime import datetime
@@ -15,9 +13,11 @@ from datetime import datetime
 try:
     from do_utilities.Common import generateMasterFile, getCreds, getInput, convertDistrictKids
     from do_utilities.Constants import f_year
+    from do_utilities.SqlDb.SqlTableVariables import trips_db_to_sql, sql_to_trips_db, trips_db_sql_schema
 except:
     from ..Common import generateMasterFile, getCreds, getInput, convertDistrictKids
     from ..Constants import f_year
+    from SqlTableVariables import trips_db_to_sql, sql_to_trips_db, trips_db_sql_schema
 
 # BigQuery access data
 credentials = service_account.Credentials.from_service_account_info(getCreds("google-drive"))
@@ -31,7 +31,7 @@ trips_table_name = "finance-450221.finance_data.TripData"
 def writeDfToDb(df, table_name="", dtype_dict=None, option="WRITE_APPEND"):
 
     if dtype_dict is None:
-        dtype_dict = variables.trips_db_sql_schema
+        dtype_dict = trips_db_sql_schema
 
     if table_name == "":
         table_name = trips_table_name
@@ -60,7 +60,7 @@ def executeStatement(
 ):
 
     if conversion_dict is None:
-        conversion_dict = variables.sql_to_trips_db
+        conversion_dict = sql_to_trips_db
 
     if "delete" in stmt.lower():
         response = getInput(
@@ -157,12 +157,12 @@ def queryTripsDb(query, include_previous_years):
     return executeStatement(query, return_a_df=True, include_previous_years=include_previous_years)
 
 
-def updateDbFromFolder(table, school_year=f_year, column_conversion=variables.trips_db_to_sql):
+def updateDbFromFolder(table, school_year=f_year, column_conversion=trips_db_to_sql):
     os.chdir(os.path.dirname(__file__))
     df_update = generateMasterFile(os.path.dirname(__file__) + "\\Upload")
 
     if "School Year" not in df_update.columns:
-        df_update = convertColumns(df_update, variables.sql_to_trips_db)
+        df_update = convertColumns(df_update, sql_to_trips_db)
 
     if table == trips_table_name:
         df_update["School"] = [convertDistrictKids(x, for_invoicing=True) for x in df_update["School"]]
@@ -224,7 +224,7 @@ def updateDb(table, df_update, school_year=f_year):
     df = client.query_and_wait(stmt, job_config=job_config).to_dataframe()
 
     if len(df) > 0:
-        df = convertColumns(df, variables.trips_db_to_sql)
+        df = convertColumns(df, trips_db_to_sql)
         df.sort_values(by="leg_id", inplace=True)
         dupe_ids = df["leg_id"].unique()
 
@@ -321,7 +321,7 @@ def getLatestInvoiceRun(recent_runs_to_skip_over=0, runs_to_grab=1, only_mgmt=Fa
 
     df = executeStatement(
         stmt=sql_stmt,
-        conversion_dict=variables.trips_db_to_sql,
+        conversion_dict=trips_db_to_sql,
         return_a_df=True,
         include_previous_years=include_previous_years,
     )
@@ -332,7 +332,7 @@ def getLatestInvoiceRun(recent_runs_to_skip_over=0, runs_to_grab=1, only_mgmt=Fa
         return getLatestInvoiceRun(recent_runs_to_skip_over, runs_to_grab, only_mgmt)
 
     elif not df.empty:
-        return convertColumns(df, variables.sql_to_trips_db)
+        return convertColumns(df, sql_to_trips_db)
     else:
         print(f"The statement '{sql_stmt}' was executed with no output")
         return pd.DataFrame()
@@ -368,7 +368,7 @@ def getLastRecordID(year=f_year):
 def setRecordID(df, year=f_year):
 
     if "School Year" not in df.columns:
-        df = convertColumns(df, variables.sql_to_trips_db)
+        df = convertColumns(df, sql_to_trips_db)
 
     try:
         last_record = getLastRecordID(year)
@@ -381,7 +381,7 @@ def setRecordID(df, year=f_year):
         df["ArchiveTimestamp"] = None
     df["RecordID"] = df.groupby("School Year").cumcount()
     df["RecordID"] = [f"{x}-{y + last_record + 1}" for x, y in zip(df["School Year"], df["RecordID"])]
-    return convertColumns(df, variables.trips_db_to_sql)
+    return convertColumns(df, trips_db_to_sql)
 
     # If we ever want to support record_id upload
     if "RecordID" not in df.columns:
@@ -405,7 +405,7 @@ def setRecordID(df, year=f_year):
     else:
         df = df_old
 
-    return convertColumns(df, variables.trips_db_to_sql)
+    return convertColumns(df, trips_db_to_sql)
 
 
 def getSpecificInvoiceRun(invoice_run=None):
@@ -427,13 +427,13 @@ def getYearsMgmt(year):
 
     df = executeStatement(
         stmt=sql_stmt,
-        conversion_dict=variables.sql_to_trips_db,
+        conversion_dict=sql_to_trips_db,
         return_a_df=True,
         include_previous_years=True,
     )
 
     if not df.empty:
-        return convertColumns(df, variables.sql_to_trips_db)
+        return convertColumns(df, sql_to_trips_db)
     else:
         print(f"The statement '{sql_stmt}' was executed with no output")
         return pd.DataFrame()
@@ -461,12 +461,12 @@ def main():
             updateDbFromFolder(
                 table=trips_table_name,
                 school_year=f_year,
-                column_conversion=variables.trips_db_to_sql,
+                column_conversion=trips_db_to_sql,
             )
         case "Execute Query":
             df = executeStatement(
                 stmt=f"Select from {trips_table_name} where invoice_run is not null",
-                conversion_dict=variables.sql_to_trips_db,
+                conversion_dict=sql_to_trips_db,
                 save_as_csv=True,
                 return_a_df=True,
                 include_previous_years=False,
