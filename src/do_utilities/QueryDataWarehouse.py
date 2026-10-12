@@ -6,8 +6,10 @@ import pandas as pd
 from boto3 import client
 from pandas import concat, DataFrame, DateOffset, options, read_csv, Timestamp, to_datetime
 
-from do_utilities.Common import convertDistrictKids, getCreds
-from do_utilities.Constants import color, data_ops_drive, f_year
+try:
+    from do_utilities.Constants import color, data_ops_drive, f_year, getCred
+except:
+    from Constants import color, data_ops_drive, f_year, getCred
 
 # Removes a warning about chaining assignments
 options.mode.chained_assignment = None
@@ -48,7 +50,7 @@ def getUpdatedRamseyData():
     ramsey_trips = ramsey_trips[ramsey_trips["TransportationVendor"] != "Unassigned"]
 
     save_path = os.path.dirname(__file__).replace(
-        "Utilities\\QueryDataWarehouse", "Invoicing\\Ramsey\\InvoiceProcessing"
+        f"Utilities{os.sep}QueryDataWarehouse", f"Invoicing{os.sep}Ramsey{os.sep}InvoiceProcessing"
     )
     os.chdir(save_path)
 
@@ -77,7 +79,8 @@ def getUpdatedRamseyData():
 
     if len(dupe_students) > 0:
         print(
-            f"There are {len(dupe_students)} extra entries " f"because the below students are under multiple schools\n"
+            f"There are {len(dupe_students)} extra entries because the below students are under "
+            f"multiple schools\n"
         )
         for cur_dupe in dupe_students:
             print(
@@ -85,7 +88,7 @@ def getUpdatedRamseyData():
                 f"{ramsey_students['School'].loc[ramsey_students['Student Name']==cur_dupe].unique()}\n"
             )
 
-    ramsey_students.to_csv(os.path.dirname(__file__) + "\\Ramsey Students.csv", index=False)
+    ramsey_students.to_csv(os.path.join(os.path.dirname(__file__), "Ramsey Students.csv"), index=False)
 
     ramsey_students.to_csv("Ramsey_Lookup_Table.csv", index=False)
     ramsey_trips.to_csv("Ramsey_All_Trips.csv", index=False)
@@ -95,7 +98,7 @@ def getUpdatedRamseyData():
 # Connect to the AWS server
 def createS3Connection(profile, consulting=False):
     # Read in and process the config for our AWS credentials
-    config = getCreds("dw")
+    config = getCred("dw")
 
     # if the provided profile is not listed, throw an error
     if profile not in config:
@@ -113,6 +116,14 @@ def createS3Connection(profile, consulting=False):
     return s3, bucket
 
 
+def getProductDataFromXWeeksAgo(weeks_back=1, report_type="all_trips", start_date=datetime.today()):
+
+    # Get the monday of the earliest week we want to send data about
+    monday_of_week = start_date - DateOffset(days=start_date.weekday() + 7 * weeks_back)
+
+    return getNewProductData(report_type, monday_of_week)
+
+
 def getNewProductData(report_type="all_trips", pull_date=datetime.now() - DateOffset(days=datetime.now().weekday())):
     conversion = {
         "all_trips": "all_trips",
@@ -125,6 +136,9 @@ def getNewProductData(report_type="all_trips", pull_date=datetime.now() - DateOf
     if report_type not in conversion:
         print(f"Error: the only supported files for getNewProductData are {conversion.keys()}")
         quit(1)
+    
+    # Make the pull_date a monday
+    pull_date = pull_date - DateOffset(days = pull_date.weekday())
 
     if pull_date > datetime(2025, 2, 10):
         # Moved from monday to tuesday
@@ -179,10 +193,10 @@ def getNewProductData(report_type="all_trips", pull_date=datetime.now() - DateOf
                 else:
                     print(f"Not sure what this file is: {cur_file_path}")
             else:
-                print(f"Couldn't successfully access {cur_file_path.split('/')[1]}")
+                print(f"Couldn't successfully access {cur_file_path.split(os.sep)[1]}")
 
         except:
-            print(f"Error processing: {cur_file_path.split('/')[1]}")
+            print(f"Error processing: {cur_file_path.split(os.sep)[1]}")
 
     if report_type == "all_trips":
         return cleanData(all_trips, datetime.now(), datetime.now(), "all_trips", False)
@@ -197,7 +211,18 @@ def getNewProductData(report_type="all_trips", pull_date=datetime.now() - DateOf
         quit(1)
 
 
-def getDataForLastXWeeks(weeks_back, report_type="all_trips", offset_weeks=0):
+def getDataForThePreviousXWeeks(start_date=datetime.today(), weeks_back=1, report_type="all_trips"):
+
+    # Get the monday of the earliest week we want to send data about
+    earliest_week_monday = start_date - DateOffset(days=start_date.weekday() + 7 * weeks_back)
+
+    # Get the last friday
+    last_week_friday = start_date - DateOffset(days=start_date.weekday() + 3)
+
+    return getDataFromWarehouse(earliest_week_monday, last_week_friday, report_type)
+
+
+def getDataForLastXWeeks(weeks_back=1, report_type="all_trips", offset_weeks=0):
     # Pull today's date to determine the mondays and friday we need
     today = datetime.now()
 
@@ -248,7 +273,7 @@ def getWeeklyDataFromWarehouse(
         # -month2.day2.year2-report_type.csv"
         # Where the first date is a monday and the second is the following sunday
         file_path = min_string + "-" + mid_string
-        file_path = file_path + "/" + file_path + "-" + report_type + ".csv"
+        file_path = f"{file_path}/{file_path}-{report_type}.csv"
 
         try:
             # Request the month's file from the s3 origin's bucket
@@ -285,8 +310,9 @@ def getWeeklyDataFromWarehouse(
 
             # Combine current week's report to the master data frame
             arr = concat([arr, test], ignore_index=True)
-        except Exception:
+        except Exception as ex:
             # Failed to get response from s3
+            print(ex)
             print(
                 f"Double check that the data warehouse bucket, {bucket}, houses the desired report "
                 f"at this filepath: {file_path}"
@@ -313,7 +339,7 @@ def getDailyDataFromWarehouse(
     date_string = date_of_data.strftime("%m.%d.%Y")
 
     # Files are stored in filepath "month.day.year/month.day.year-report_type.csv
-    file_path = date_string + "/" + date_string + "-" + report_type + ".csv"
+    file_path = f"{date_string}/{date_string}-{report_type}.csv"
 
     try:
         # Request the month's file from the s3 origin's bucket
@@ -332,8 +358,9 @@ def getDailyDataFromWarehouse(
                 f"at this filepath: {file_path}"
             )
 
-    except Exception:
+    except Exception as ex:
         # Failed to get response from s3
+        print(ex)
         print(
             f"Double check that the data warehouse bucket, {bucket}, houses the desired report at "
             f"this filepath: {file_path}"
@@ -428,7 +455,7 @@ def getDataFromWarehouse(
 
         # Files are stored in filepath month-year/month-year-report_type.csv
         file_path = "{:02d}".format(local_min) + "-" + str(min_year)
-        file_path = file_path + "/" + file_path + "-" + report_type + ".csv"
+        file_path = f"{file_path}/{file_path}-{report_type}.csv"
 
         try:
             # Request the month's file from the s3 origin's bucket
@@ -447,7 +474,8 @@ def getDataFromWarehouse(
                     f"Double check that the data warehouse bucket, {bucket}, houses the desired "
                     f"report at this filepath: {file_path}"
                 )
-        except Exception:
+        except Exception as ex:
+            print(ex)
             print(
                 f"Double check that the data warehouse bucket, {bucket}, houses the desired report "
                 f"at this filepath: {file_path}"
@@ -475,6 +503,7 @@ def getDataFromWarehouse(
     return arr.reset_index(drop=True)
 
 
+
 def cleanData(arr, min_date, max_date, report_type, filter_dates=True):
     # If the data is sorted by date, then filter to just the given date range, else remove
     # duplicates between months
@@ -494,6 +523,9 @@ def cleanData(arr, min_date, max_date, report_type, filter_dates=True):
         if "name" in cur_col.lower():
             arr[cur_col] = [x.replace("`", "'").replace("’", "'") if x == x else x for x in arr[cur_col]]
 
+        if "program" in cur_col.lower():
+            arr.dropna(subset=[cur_col], inplace=True)
+        
         if "school" in cur_col.lower():
 
             # if report_type == "weekly_comms":
@@ -522,7 +554,8 @@ def cleanData(arr, min_date, max_date, report_type, filter_dates=True):
 
         if cur_col in ["TransportationVendor", "Vendor"]:
 
-            arr[cur_col].fillna("", inplace=True)
+            # arr[cur_col].fillna("", inplace=True)
+            arr.fillna({cur_col: ""}, inplace=True)
 
             conversions = {
                 "Assist": "Assist Services",
@@ -656,10 +689,10 @@ def updateSchools():
 
     dw_report = dw_report.drop_duplicates()
 
-    dw_report.to_csv(f"{data_ops_drive}\\Databases\\All_TOMS_schools.csv", index=False)
+    dw_report.to_csv(os.path.join(data_ops_drive, "Databases","All_TOMS_schools.csv"), index=False)
 
     dw_report = dw_report[dw_report["Archived"].isna()]
-    dw_report.to_csv(f"{data_ops_drive}\\Databases\\TOMS_schools.csv", index=False)
+    dw_report.to_csv(os.path.join(data_ops_drive, "Databases","TOMS_schools.csv"), index=False)
 
 
 def approximateLastMonthDataFromWarehouse(report_type="all_trips", profile="prod"):
@@ -692,10 +725,10 @@ def approximateLastMonthDataFromWarehouse(report_type="all_trips", profile="prod
 # Test the system and save a copy of the pulled data locally, this script is mainly intended to
 # have its functions be called by other scripts
 def test():
-    start_date = datetime(2026, 2, 2)
-    max_date = datetime(2026, 2, 6)
+    start_date = datetime(2025, 9, 3)
+    max_date = datetime(2025, 9, 3)
 
-    updateSchools()
+    # updateSchools()
 
     all_report_types = [
         "adm",
@@ -713,7 +746,7 @@ def test():
         "old_curb",
     ]
 
-    report_type = "schools"
+    report_type = "all_trips"
 
     os.chdir(os.path.dirname(__file__))
 
@@ -745,7 +778,6 @@ def test():
         dw_report = dw_report.sort_values(by="WeekStarting", ascending=False)
         dw_report = dw_report.drop_duplicates(subset="Id")
         dw_report = dw_report.sort_values(by="RouteName", ascending=False)
-        dw_report["SchoolDistrict"] = [convertDistrictKids(x, True) for x in dw_report["SchoolDistrict"]]
         dw_report["EndDate"] = pd.to_datetime(dw_report["EndDate"])
         dw_report["Archived"] = [today >= x for x in dw_report["EndDate"]]
         dw_report = dw_report[

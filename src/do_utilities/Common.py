@@ -6,14 +6,10 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from glob import glob
-from json import dumps
 from re import search, sub
 from shutil import copyfile, move, rmtree
 from smtplib import SMTP
 from tkinter import filedialog
-from traceback import format_exc
-from copy import deepcopy
-
 
 import pandas as pd
 from gspread import authorize
@@ -23,10 +19,21 @@ from pandas import concat, DataFrame, ExcelFile, options, read_csv, read_excel
 from pydrive2.auth import GoogleAuth
 from anglicize import anglicize
 from rapidfuzz import process, fuzz
+from copy import deepcopy
 
-# from Geocoding.GoogleApi import GetRoutedDistance, EquivalentAddresses
-from do_utilities.Constants import getStandards, getCred, data_ops_drive, initializeVariables
-from do_utilities.AddressStandardizer import convertAddress
+# from Geocoding.GoogleApi import GetRoutedDistance, equivalentAddresses
+try:
+    from do_utilities.Constants import getStandards, getCred, data_ops_drive, initializeVariables
+    from do_utilities.AddressStandardizer import convertAddress
+    from do_utilities.QueryDataWarehouse import getDataForLastXWeeks
+    from do_utilities.Geocoding.GoogleApi import getRoutedDistance, equivalentAddresses
+
+except:
+    from Constants import getStandards, getCred, data_ops_drive, initializeVariables
+    from AddressStandardizer import convertAddress
+    from QueryDataWarehouse import getDataForLastXWeeks
+    from Geocoding.GoogleApi import getRoutedDistance, equivalentAddresses
+
 
 options.mode.chained_assignment = None
 
@@ -36,7 +43,10 @@ standard = getStandards()
 
 # Ramsey County Foster and some other schools need to be treated as a single entity, so we need to
 # know all of the schools that fall under their umbrellas
-df_toms_schools = read_csv(data_ops_drive + "/Databases/All_TOMS_schools.csv")
+df_toms_schools = getDataForLastXWeeks(1, "schools")
+df_toms_schools = df_toms_schools.drop_duplicates()
+
+
 df_toms_schools["District Alpha"] = ""
 
 always_convert = [
@@ -130,9 +140,35 @@ df_accounts = pd.DataFrame(
             ],
         )
 
+df_vendors = pd.DataFrame(
+            [],
+            columns=[
+                "Name",
+                "Region",
+                "Internal Status",
+                "Bus",
+                "Van",
+                "Cab",
+                "Field Trips",
+                "Primary Contact Name",
+                "Primary Email",
+                "Primary Phone",
+                "Secondary Contact",
+                "Secondary Email",
+                "Secondary Phone",
+                "Field Trip Email",
+                "Invoicing Emails",
+                "Name in URL Format",
+                "Approved Extra Emails",
+                "Contacted"
+                "Notes",
+                "Searchable Name",
+                "TOMS ID"
+            ],
+        )
 
 def initialize(filepath = os.getcwd()):
-    global df_toms_schools, initialized
+    global df_toms_schools, initialized, df_accounts
 
     initializeVariables(filepath)
     # Data for accessing the Google sheets file with account managers
@@ -160,6 +196,17 @@ def initialize(filepath = os.getcwd()):
         # Make the first row values the column headers, then remove that row
         df_accounts.columns = df_accounts.iloc[0]
         df_accounts = df_accounts[1:]
+        
+        sheet_instance = g_sheet.get_worksheet(4)
+        # Read in the data as a df
+        df_vendors = DataFrame(sheet_instance.get_all_values())
+        
+        # Make the first row values the column headers, then remove that row
+        df_vendors.columns = df_vendors.iloc[0]
+        df_vendors = df_vendors[1:]
+        
+        df_vendors['TOMS ID'] = df_vendors['TOMS ID'].astype(int)
+        
     except Exception:
         print("Can't access Google sheets currently")
         df_accounts = pd.DataFrame(
@@ -183,6 +230,32 @@ def initialize(filepath = os.getcwd()):
                 "Searchable",
                 "Hotline",
                 "Hours Different from Central",
+            ],
+        )
+        df_vendors = pd.DataFrame(
+            [],
+            columns = [
+                "Name",
+                "Region",
+                "Internal Status",
+                "Bus",
+                "Van",
+                "Cab",
+                "Field Trips",
+                "Primary Contact Name",
+                "Primary Email",
+                "Primary Phone",
+                "Secondary Contact",
+                "Secondary Email",
+                "Secondary Phone",
+                "Field Trip Email",
+                "Invoicing Emails",
+                "Name in URL Format",
+                "Approved Extra Emails",
+                "Contacted"
+                "Notes",
+                "Searchable Name",
+                "TOMS ID"
             ],
         )
     
@@ -249,36 +322,42 @@ def getSchoolDF():
     return df_toms_schools
 
 
+# Get the account df
+def getAccountsForDebugging():
+    return df_accounts
+
+
 # Get the QBR filepath for saving, file path is State\Districts or Individual\Alpha\
 def getSchoolMatrixRegionPath(alpha):
     state = getStateFromAlphaOrName(alpha)
     if state != state or str(state).lower() == "nan":
         print(f"Failed to find state for: {alpha}")
         quit(1)
-    return f"\\{state}\\{alpha}\\"
+    return f"{os.sep}{state}{os.sep}{alpha}{os.sep}"
+
 
 # Get the QBR filepath for saving, file path is State\Alpha\
 def getSchoolSharedFolderPath(alpha):
     school = getSchoolFromAlpha(alpha)
     if school == "Ramsey Cty-Foster":
-        return "MSP RAM\\MSP RAM FULL\\"
+        return f"MSP RAM{os.sep}MSP RAM FULL{os.sep}"
     state = compareToSchools(school, "School", ["State"])[0]
 
     shared_folder_name = "4mativ-" + alpha + "-Shared Folder"
 
     if state == "MN":
-        return "MSP\\" + alpha + "\\" + shared_folder_name + "\\"
+        return f"MSP{os.sep}{alpha}{os.sep}{shared_folder_name}{os.sep}"
     elif state == "TX":
         state = "HOU"
     elif state == "IN":
-        state = "IND\\INDY"
+        state = f"IND{os.sep}INDY"
     elif state == "AZ":
-        state = "PHX\\Paul Revere" if alpha == "PRA" else "PHX\\VCP Arizona"
+        state = f"PHX{os.sep}Paul Revere" if alpha == "PRA" else f"PHX{os.sep}VCP Arizona"
     else:
         print(f"ERROR: NO state found for {alpha} / {school}")
         quit(1)
 
-    return f"{state}\\{alpha}\\"
+    return f"{os.sep}{state}{os.sep}{alpha}{os.sep}"
 
 
 # Get the street address of all schools
@@ -455,12 +534,12 @@ def combineFolders(folder_path_arr):
 # ------------- Random Utility Functions -------------------------------------------------------- #
 
 # Sends an email from your email address
-def sendEmail(sender, to, cc, subject, body, attachment_filepath=None, bcc=None):
+def sendEmail(sender, to, cc, subject, body, attachment_filepath=None, bcc=None, testing=False):
     if not initialized:
         print(f"Error: Common has not been initialized")
         return
     # alternate password used to access my email via script
-    app_pass = getCreds("gmail-personal")["app_pass"]
+    app_pass = getCreds("gmail-personal")["password"]
 
     # Instantiate email object
     msg = MIMEMultipart()
@@ -496,7 +575,7 @@ def sendEmail(sender, to, cc, subject, body, attachment_filepath=None, bcc=None)
             # Encode into base64
             encoders.encode_base64(p)
 
-            filename = cur_file.replace("\\", "/").split("/")[-1]
+            filename = cur_file.split(os.sep)[-1]
 
             # Save the file name as part of the attachment
             p.add_header("Content-Disposition", f"attachment; filename= {filename}")
@@ -515,8 +594,11 @@ def sendEmail(sender, to, cc, subject, body, attachment_filepath=None, bcc=None)
 
     # Converts the Multipart msg into a string
     text = msg.as_string()
-
-    if bcc:
+    
+    # Send the email
+    if testing:
+        s.sendmail(sender, "tony.mosolf@gmail.com", text)
+    elif bcc:
         bcc = ", ".join(bcc) if len(bcc) > 1 else bcc[0] if len(bcc) == 1 else ""
         # Send the email
         s.sendmail(sender, bcc, text)
@@ -562,13 +644,16 @@ def generateRequirementsFile(move_locations = True):
         if move_locations:
             os.chdir(os.path.dirname(__file__))
         
-        repo_path = "/".join(os.getcwd().split("\\"))
-        command = f"python.exe -m pip list --format=freeze > {repo_path}/requirements.txt"
+        current_path = os.path.abspath(__file__).split(os.sep)
+        repo_path = os.sep.join(current_path[:current_path.index("GitHub") + 2]) + os.sep
+        
+        command = f"python.exe -m pip list --format=freeze > {repo_path}{os.sep}requirements.txt"
         
         os.chdir(repo_path)
         os.system(command)
     except Exception:
         print("Failed to generate new reqiurements file")
+
 
 # Gets the credential values for various APIs
 def getCreds(cred_name):
@@ -578,18 +663,21 @@ def getCreds(cred_name):
 # ------------- Archive System ----------------------- #
 
 def archiveRun(start_location, current_files=True):
+    
+    if start_location[-1] != os.sep:
+        start_location += os.sep
 
     if not "Run Files" in start_location:
-        start_location += "\\Run Files\\"
+        start_location += f"Run Files{os.sep}"
 
     date_string = date.today().strftime("%Y_%m_%d")
 
     # Generate the filepath to save this file in the state's run folder
 
-    archive_path = start_location + "Used\\"
+    archive_path = f"{start_location}Used{os.sep}"
 
     if current_files:
-        paths = [archive_path + "LastRun\\", archive_path + date_string + "\\"]
+        paths = [archive_path + f"LastRun{os.sep}", archive_path + f"{date_string}{os.sep}"]
         try:
             while len(next(os.walk(archive_path))[1]) > 10:
                 oldest_folder = next(os.walk(archive_path))[1][0]
@@ -602,16 +690,15 @@ def archiveRun(start_location, current_files=True):
         except:
             pass
     else:
-        start_location = archive_path + "LastRun\\"
+        start_location = archive_path + f"LastRun{os.sep}"
         try:
             # -2 = last date archive folder, -1 = LastRun folder
             newest_folder = next(os.walk(archive_path))[1][-2]
-            paths = [archive_path + newest_folder + "\\"]
+            paths = [archive_path + newest_folder + os.sep]
         except Exception:
-            paths = [archive_path + "LastRun\\"]
+            paths = [archive_path + f"LastRun{os.sep}"]
             print("ERROR: Failed to Unload last run files")
 
-    paths = [x.replace("\\", "/") for x in paths]
 
     for input_folder in next(os.walk(start_location))[1]:
         if input_folder.lower() in ["used", ".gitkeep"]:
@@ -625,12 +712,10 @@ def archiveRun(start_location, current_files=True):
 
 
 def archiveFiles(input_folder, paths, start_location):
-    start_location = start_location.replace("\\", "/")
-    if start_location[-1] != "/":
-        start_location += "/"
-    files = glob(start_location + input_folder + "/*")
+    if start_location[-1] != os.sep:
+        start_location += os.sep
+    files = glob(start_location + input_folder + f"{os.sep}*")
     for f in files:
-        f = f.replace("\\", "/")
         try:
             for cur_path in paths:
                 new_path = f.replace(start_location, cur_path)
@@ -643,12 +728,13 @@ def archiveFiles(input_folder, paths, start_location):
                 if not os.path.exists(new_path):
                     os.makedirs(new_path)
             # Found folder instead of file, run again on this folder
-            archiveFiles(input_folder + "/" + folder, paths, start_location)
+            archiveFiles(input_folder + os.sep + folder, paths, start_location)
 
 
 def getPreviousRun(start_location):
     try:
-        newest_folder = start_location + "\\Run Files\\Used\\LastRun"
+        newest_folder = os.path.join(start_location, "Run Files", "Used", "LastRun")
+
         if not os.path.exists(newest_folder):
             raise Exception
         newest_folder = "LastRun"
@@ -656,23 +742,24 @@ def getPreviousRun(start_location):
     except Exception:
         try:
             # Find the newest run folder to move the inputs from
-            if len(next(os.walk(start_location + "\\Run Files\\Used\\"))[1]) >= 1:
-                newest_folder = next(os.walk(start_location + "\\Run Files\\Used\\"))[1][-1]
+            if len(next(os.walk(os.path.join(start_location, "Run Files", "Used", "")))[1]) >= 1:
+                newest_folder = next(os.walk(os.path.join(start_location, "Run Files", "Used", "")))[1][-1]
                 print("Loading inputs from folder:", newest_folder)
         except Exception:
             print("Unable to Reload input files as there are no saved archives")
             quit(1)
 
     # Save the current location of the run's folder
-    newest_path = start_location + "\\Run Files\\Used\\" + newest_folder
+    newest_path = os.path.join(start_location, "Run Files", "Used", newest_folder)
+    
 
     # Iterate through each folder in the last run and move its contents to the Run Files folder
     for folder in next(os.walk(newest_path))[1]:
         if "output" in folder.lower():
             continue
-        files = glob(newest_path + "\\" + folder + "\\*")
+        files = glob(f"{newest_path}{os.sep}{folder}{os.sep}*")
         for f in files:
-            temp = f.replace("Run Files\\Used\\" + newest_folder, "Run Files")
+            temp = f.replace(os.path.join("Run Files", "Used", newest_folder), "Run Files")
             move(f, temp)
 
 
@@ -725,7 +812,6 @@ def queryAdddressInTOMS(address, school_alpha="", coords="", return_candidates=F
     else:
         print(f"Failed to query TOMS for {address}")
         return [address] if return_candidates else address
-
 
 
 # ------------- Data Cleaning ----------------------- #
@@ -873,7 +959,13 @@ def standardizeRouteName(route_name):
     return "_".join(arr).replace(" ", "")
 
 
-
+def getCurrentVendorName(vendor_id):
+    if df_vendors.empty or vendor_id not in df_vendors['TOMS ID'].unique():
+        return ""
+    else:
+        return df_vendors.loc[df_vendors['TOMS ID'] == vendor_id, "Searchable Name"].max()
+    
+    
 # ------------- School Data Lookup ----------------------- #
 
 
@@ -902,7 +994,7 @@ def compareToSchools(string_to_comp, field_to_comp, fields_to_return=None):
     values = list(df_toms_schools[field_to_comp].unique())
 
     for cur_value in values:
-        if cur_value.title() == string_to_comp.title():
+        if str(cur_value).title() == string_to_comp.title():
             found = True
             for i in range(len(fields_to_return)):
                 return_value.append(
@@ -1070,6 +1162,7 @@ def getSchoolFromAlpha(alpha):
 def isValidTomsData(val, column):
     return val in df_toms_schools[column].unique()
 
+
 # Get the address for a specific school
 def getSchoolAddress(school_name):
     return compareToSchools(school_name, "School", ["Street"])[0]
@@ -1182,6 +1275,197 @@ def fuzzyMatchSchool(given_name, cutoff=90):
     if match:
         return df_toms_schools.iloc[match[2]]["School"]
     return given_name
+
+
+# Merge two json objects, using the first as the base/authority. Provide any required unique keys to ensure dupes
+# are removed
+# When using for DataTemplateToTOMS, base = template, addition = TOMS
+def mergeJson(local_base, local_addition, unique_keys, extract_names_only=False):
+
+    if extract_names_only:
+        try:
+            unique_keys.remove("name")
+        except:
+            pass
+
+    # Avoiding dealing with copy-on-write issues
+    base = deepcopy(local_base)
+    addition = deepcopy(local_addition)
+
+    if not base or len(base) == 0:
+        return
+
+    if len(addition) == 0:
+        for key in unique_keys:
+            final_base = []
+            base_values = [x[key] for x in base]
+            if key == "address":
+                base_values = [convertAddress(x) for x in base_values]
+                for i in range(len(base_values)):
+                    unique = True
+                    for j in range(i + 1, len(base_values)):
+                        if equivalentAddresses(base_values[i], base_values[j]):
+                            unique = False
+                    if unique:
+                        final_base.append(deepcopy(base[i]))
+                base = deepcopy(final_base)
+            else:
+                if len(base_values) != len(set(base_values)):
+                    for i in range(len(base)):
+                        try:
+                            if base_values[i] not in base_values[i + 1 :]:
+                                final_base.append(deepcopy(base[i]))
+                        except:
+                            if i == len(base) - 1 and base_values[i] in base_values[:i]:
+                                final_base.append(deepcopy(base[i]))
+                    if len(final_base) == len(set(base_values)):
+                        base = deepcopy(final_base)
+                    else:
+                        pass
+        return base
+
+    base_entries = [x["name"] for x in base]
+    base_has_primary = len(base_entries) > 0
+
+    if len(base_entries) != len(set(base_entries)):
+        if "name" in unique_keys:
+            print("There are duplicate names in base", base)
+
+    for i in range(len(addition)):
+        wiped = False
+        try:
+            if base_has_primary:
+                addition[i]["primary"] = False if addition[i]["primary"] is bool else "False"
+        except:
+            pass
+
+        if "name" not in unique_keys:
+            match = process.extractOne(addition[i]["name"], base_entries, score_cutoff=90)
+            if match:
+                if extract_names_only:
+                    if addition[i]["name"] in base_entries:
+                        pass
+                    else:
+                        base[match[2]]["name"] = (
+                            addition[i]["name"] if "Unknown" in addition[i]["name"] else base[match[2]]["name"]
+                        )
+                # addition[i]["name"] += "_new"
+
+        for key in unique_keys:
+            if wiped:
+                continue
+            base_values = [x[key] for x in base]
+            if key == "address":
+                base_values = [convertAddress(x) for x in base_values]
+                addition[i][key] = convertAddress(addition[i][key])
+                for j in range(len(base_values)):
+                    if wiped:
+                        continue
+                    elif equivalentAddresses(base_values[j], addition[i][key]):
+                        base[j]["name"] = deepcopy(addition[i]["name"])
+                        for cur_key in unique_keys:
+                            base[j][cur_key] = deepcopy(addition[i][cur_key])
+                        addition[i] = nan
+                        wiped = True
+            else:
+                if wiped:
+                    continue
+                if len(base_values) != len(set(base_values)):
+                    print(f"There are duplicate {key} keys in the base json", base)
+                match = process.extractOne(addition[i][key], base_values, score_cutoff=90)
+                if match:
+                    base[match[2]]["name"] = deepcopy(addition[i]["name"])
+                    for cur_key in unique_keys:
+                        base[match[2]][cur_key] = deepcopy(addition[i][cur_key])
+                    addition[i] = nan
+
+        if wiped:
+            continue
+
+    addition = [x for x in addition if x == x]
+
+    if not extract_names_only:
+        base += addition
+
+    try:
+        base.remove(nan)
+    except:
+        pass
+
+    if len(base) > 0:
+        primary_test = [x["primary"] for x in base]
+        if "True" not in primary_test and True not in primary_test:
+            base[0]["primary"] = True if base[0]["primary"] is bool else "True"
+
+        primary_test = [x["primary"] for x in base]
+        if "true" != str(primary_test[0]).lower():
+            primary = [nan]
+            for i in range(len(base)):
+                if "true" == str(primary_test[i]).lower():
+                    primary = [deepcopy(base[i])]
+                    base.pop(i)
+                    break
+            base = primary + base
+
+    try:
+        base.remove(nan)
+    except:
+        pass
+
+    return base
+
+
+def convertToDollars(amount):
+    if amount != amount:
+        return ""
+    return "${:,.2f}".format(amount)
+
+
+def compareSets(a, b):
+    
+    results = {}
+    a = set(a)
+    b = set(b)
+    
+    results['A'] = a
+    results['B'] = b
+    results['A-B'] = a.difference(b)  # a-b
+    results['B-A'] = b.difference(a)  # b-a
+    results['A&B'] = a.intersection(b)  # a&b
+    results['A|B'] = a.union(b)  # a|b
+    results['A|B-A&B'] = a.symmetric_difference(b)  # a^b
+    
+    return results
+
+
+def standardizeMode(mode_text):
+    
+    if mode_text != mode_text:
+        return ""
+    
+    if mode_text == "FieldTrip":
+        return mode_text
+    
+    # ESY is the only all caps mode
+    if mode_text.lower() == "esy":
+        return mode_text.upper()
+    
+    mode_text = mode_text.title()
+    
+    # WC and SPED should be all caps
+    for cur in ['Wc ', 'Sped ']:
+        mode_text = mode_text.replace(cur, cur.upper())
+    
+    # Miles & hours are allowed to be plural
+    if 'Miles' in mode_text or 'Hours' in mode_text:
+        # Changing from extra to excess to align with contract verbiage
+        mode_text = mode_text.replace("Extra", "Excess ")
+    
+    # Make singular if not 'Bus'
+    elif mode_text[-1] == "s" and mode_text[-3:] != "Bus":
+        mode_text = mode_text[:-1]
+    
+    return mode_text
 
 
 initialize()

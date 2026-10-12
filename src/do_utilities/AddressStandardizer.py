@@ -4,12 +4,19 @@ from string import capwords
 from usaddress import tag
 from rapidfuzz.fuzz import QRatio
 
-from do_utilities.Constants import getStandards, initializeVariables
+try:
+    from do_utilities.Constants import getStandards, initializeVariables
+except:
+    from .Constants import getStandards, initializeVariables
+
 
 standard = getStandards()
 
 
 def streetAddressApproximatelyEqual(add1, add2, match_amount=85):
+    ## ADDITION TO MAKE CASE INSENSITIVE:
+    add1 = str(add1).strip().upper()
+    add2 = str(add2).strip().upper()
     return QRatio(add1, add2) >= match_amount
 
 
@@ -252,7 +259,7 @@ def convertAddress(address_string, street_only=False):
         initializeVariables()
         standard = getStandards()
         if standard.empty:
-            print(f"Error: Common has not been initialized, can't standardize addresses")
+            # print(f"Error: Common has not been initialized, can't standardize addresses")
             return ""
         
     # NAN check
@@ -260,8 +267,8 @@ def convertAddress(address_string, street_only=False):
         return ""
 
     address_string = address_string.replace("  ", " ")
-
-    address_string = address_string.title()
+    address_string = address_string.replace(".0", "")
+    # address_string = address_string.title()
 
     # Typically a "USA" is seen when the last part of the address is repeated, so remove
     # everything prior to it (if not duplicated, it just removes the

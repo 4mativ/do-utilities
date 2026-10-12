@@ -2,18 +2,56 @@ import os
 from collections import namedtuple
 from datetime import datetime
 from copy import deepcopy
+
+import pandas as pd
 from dotenv import dotenv_values
 from pandas import read_csv, DataFrame
+import platform
+import glob
+from json import loads
+
+
+def getDriveRoot():
+    system = platform.system()
+
+    if system == "Windows":
+        return "G:/Shared drives"
+
+    elif system == "Darwin":  # macOS
+        cloud_storage = os.path.expanduser("~/Library/CloudStorage")
+        matches = glob.glob(os.path.join(cloud_storage, "GoogleDrive-*"))
+
+        if not matches:
+            raise FileNotFoundError(
+                "Could not find a Google Drive mount under "f"{cloud_storage}. Is Google Drive for Desktop installed "
+                "and signed in?"
+            )
+        if len(matches) > 1:
+            raise RuntimeError(
+                "Multiple Google Drive accounts detected: "f"{matches}. Please specify which one to use."
+            )
+
+        return os.path.join(matches[0], "Shared drives")
+
+    elif system == "Linux":
+        return os.path.expanduser("~/GoogleDrive/Shared drives")
+
+    else:
+        raise RuntimeError(f"Unsupported platform: {system}")
+
+
+shared_drives = getDriveRoot()
+
+# print(f"When run via GitHub Actions, shared_drives = {shared_drives}")
 
 # A utility file that other scripts may import and use its common variables
+shared_4mativ_drive = os.path.join(shared_drives, "4MATIV General")
 
-shared_4mativ_drive = "G:/Shared drives/4MATIV General"
+diagnostics_drive = os.path.join(shared_drives, "Consulting")
 
-diagnostics_drive = "G:/Shared drives/Consulting"
+data_ops_drive = os.path.join(shared_drives, "Data_Ops")
 
-data_ops_drive = "G:/Shared drives/Data_Ops"
-
-active_diagnostics_folder = diagnostics_drive + "/0. Consulting - Ongoing"
+active_diagnostics_folder = os.path.join(diagnostics_drive, "0. Consulting - Ongoing")
 
 billing_doc_id = "12NvTg2NfkuvnT-bM7lO0eTu4WW3BWA7ul0t0y7YvX7E"
 
@@ -201,6 +239,7 @@ data_template_columns = [
     "Transportation Status (Riding/Not Riding)",  # Riding, Riding (AM Only), Riding (PM Only), Not Riding
     "Grade",
     "Program",
+    "Dismissal Group (if applicable)",
     "Accomodations (select all that apply)",
     # Curb-to-Curb, Booster seat, Car seat, 5-point harness, Solo, Aide,
     # Wheelchair, Small vehicle, hand-to-hand, Visual Impairment, Hearing impairment, Non-verbal, Behavior plan,
@@ -273,20 +312,40 @@ github_file_path = ""
 
 creds = {}
 
-# billing_dbs = {}
-
 invoicing_db_path = ""
 
-df_standardizations = DataFrame()
+df_standardizations = pd.DataFrame(columns = ['Text', 'Abbreviation'])
+
+# print(f"os.environ = \n\n{os.environ}\n\n")
 
 
 def initializeVariables(filepath = os.getcwd()):
     global github_file_path, creds, billing_dbs, invoicing_db_path, df_standardizations
 
-    # The path to the github repository that this repo is in, used to reference other repo's files in
-    # scripts
-    github_file_path = str(filepath)[: str(filepath).find("GitHub") + 7]
-    creds = dotenv_values(github_file_path + ".env")
+    creds = {}
+    
+    try:
+        creds = loads(os.environ["REPO_SECRET"])
+        # print(f"creds from repo = \n\n{creds}\n\n")
+        
+    except:
+        # The path to the github repository that this repo is in, used to reference other repo's files in
+        # scripts
+        current_path = filepath.split(os.sep)
+        try:
+            github_file_path = os.sep.join(current_path[:current_path.index("GitHub") + 1]) + os.sep
+        except:
+            print(f"Failed to find GitHub in {github_file_path}")
+            github_file_path = ""
+        creds = dotenv_values(github_file_path + ".env")
+        invoicing_db_path = os.path.join(
+            github_file_path, "Automation-Scripts", "Invoicing",
+            "InvoicingDBs"
+        ) + os.path.sep
+        df_standardizations = read_csv(
+            os.path.join(data_ops_drive, "Databases", "Standardization.csv")
+        )
+
     for cur in ["google-drive", "postgres", "qb", "gmail-personal", "dw", "twilio"]:
         creds[cur] = [[x.replace(f"{cur.upper()}-", ""), creds[x]] for x in creds if f"{cur.upper()}" in x]
 
@@ -302,26 +361,9 @@ def initializeVariables(filepath = os.getcwd()):
         "new": deepcopy(creds["dw-prod"]),
     }
     creds["dw"]["new"]["bucket"] = creds["DW-PROD-NEW-BUCKET"]
-    # scope_app = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    # cred = ServiceAccountCredentials.from_json_keyfile_dict(creds["google-drive"], scope_app)
-    # client = gspread.authorize(cred)
-    # billing_file = client.open_by_key(billing_doc_id)
-    # billing_sheets = billing_file.worksheets()
-    # for cur_sheet in billing_sheets:
-    #     name = cur_sheet.title
-    #     # Read in the filter as a df
-    #     df = DataFrame(cur_sheet.get_all_values())
-    #     # Make the first row values the column headers, then remove that row
-    #     df.columns = df.iloc[0]
-    #     df = df[1:]
-    #     if "Archive Date" in df.columns:
-    #         df["Archive Date"] = df["Archive Date"].astype(str)
-    #         df = df[df["Archive Date"] == ""]
-    #         df.reset_index(drop=True, inplace=True)
-    #     billing_dbs[name] = df
-    # Save the file path to the files in the InvoicingDB repo
-    invoicing_db_path = github_file_path + "Automation-Scripts/Invoicing/InvoicingDBs/"
-    df_standardizations = read_csv(data_ops_drive + "/Databases/Standardization.csv")
+   
+    
+    
 
 def getCred(cred_name):
     if cred_name in creds.keys():
