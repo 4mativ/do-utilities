@@ -8,7 +8,7 @@ from dotenv import dotenv_values
 from pandas import read_csv, DataFrame
 import platform
 import glob
-from json import loads
+from json import loads, dumps
 
 
 def getDriveRoot():
@@ -312,6 +312,8 @@ github_file_path = ""
 
 creds = {}
 
+cred_location = data_ops_drive + "/Credentials/MasterCredentials.json"
+
 invoicing_db_path = ""
 
 df_standardizations = pd.DataFrame(columns = ['Text', 'Abbreviation'])
@@ -361,14 +363,29 @@ def initializeVariables(filepath = os.getcwd()):
         "new": deepcopy(creds["dw-prod"]),
     }
     creds["dw"]["new"]["bucket"] = creds["DW-PROD-NEW-BUCKET"]
-   
-    
     
 
 def getCred(cred_name):
     if cred_name in creds.keys():
         return creds[cred_name]
     print(f"There were no credentials found for {cred_name}")
+
+
+def setCreds(cred_name, new_creds, save_change=False, add_if_new=False):
+    if cred_name in creds.keys():
+        creds[cred_name].update(new_creds)
+    elif add_if_new:
+        creds[cred_name] = new_creds
+    else:
+        print(f"There were no credentials found for {cred_name}")
+        return
+    if save_change:
+        local_creds = dict(sorted(creds.items()))
+        json_object = dumps(local_creds, indent=4)
+        with open(cred_location, "w") as outfile:
+            outfile.write(json_object)
+        print("Saved change to creds!")
+    return
 
 
 def getStandards():
