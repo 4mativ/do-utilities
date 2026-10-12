@@ -325,6 +325,7 @@ ignored_vendors = [
     "Walk",
     "After school",
     "District transportation",
+    "4mativ ONLY",
 ]
 
 creds = {}
