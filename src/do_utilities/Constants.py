@@ -310,6 +310,23 @@ data_template_columns = [
 
 github_file_path = ""
 
+ignored_vendors = [
+    "Unassigned",
+    "PPU",
+    "DISTANCE",
+    "WALK",
+    "TRANSIT",
+    "CARPOOL",
+    "PENDING",
+    "4mativ",
+    "Academy of Holy Angels",
+    "Carpool",
+    "Kiddie kingdom",
+    "Walk",
+    "After school",
+    "District transportation",
+]
+
 creds = {}
 
 cred_location = data_ops_drive + "/Credentials/MasterCredentials.json"
