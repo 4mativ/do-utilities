@@ -517,7 +517,7 @@ def getCurrentVendorName(current_name, current_id, df_vendor):
         print(f"Failed to find a vendor with ID |{current_id}|")
         return current_name
 
-def cleanData(arr, min_date, max_date, report_type, filter_dates=True):
+def cleanData(arr, min_date=datetime.today(), max_date=datetime.today(), report_type="all_trips", filter_dates=True):
     
     df_vendor = pd.DataFrame()
     
