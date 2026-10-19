@@ -14,7 +14,8 @@ import time
 try:
     from do_utilities.Constants import creds
 except:
-    from ..Constants import creds
+    os.chdir("..")
+    from Constants import creds
     
 # Move to the current folder to read and write locally
 os.chdir(os.path.dirname(__file__))

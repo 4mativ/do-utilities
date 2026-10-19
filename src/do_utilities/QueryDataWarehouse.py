@@ -750,8 +750,8 @@ def approximateLastMonthDataFromWarehouse(report_type="all_trips", profile="prod
 # Test the system and save a copy of the pulled data locally, this script is mainly intended to
 # have its functions be called by other scripts
 def test():
-    start_date = datetime(2025, 9, 3)
-    max_date = datetime(2025, 9, 3)
+    start_date = datetime(2025, 11, 4)
+    max_date = datetime(2025, 11, 13)
 
     # updateSchools()
 
@@ -771,11 +771,11 @@ def test():
         "old_curb",
     ]
 
-    report_type = "all_trips"
+    report_type = "historical_trips"
 
     os.chdir(os.path.dirname(__file__))
 
-    selection = 2
+    selection = 0
 
     if selection == 0:
         dw_report = getDataFromWarehouse(start_date, max_date, report_type)
