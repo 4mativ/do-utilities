@@ -593,7 +593,7 @@ def cleanData(arr, min_date=datetime.today(), max_date=datetime.today(), report_
                 "First Student": "First Student",
                 "Pride": "Pride-PTB",
                 "Rainbow": "Rainbow/B&W",
-                "Eventsource Ministries": "Event Source",
+                # "Eventsource Ministries": "Event Source",
             }
 
             for cur_conversion in conversions:
