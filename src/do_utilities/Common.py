@@ -68,6 +68,8 @@ convert_for_invoicing = [
     "Seven Hills Prep Academy",
     "Vista College Prep",
     "United Schools",
+    "KIPP Columbus",
+    "Southwest Public Schools"
 ]
 
 fake_districts = ["Montgomery Test District"]
