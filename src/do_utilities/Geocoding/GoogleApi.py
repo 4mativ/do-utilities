@@ -17,8 +17,7 @@ except:
     os.chdir("..")
     from Constants import creds
     
-# Move to the current folder to read and write locally
-os.chdir(os.path.dirname(__file__))
+save_path = os.path.dirname(__file__)
 
 # Google Geocoder API Parameters
 geo_api = "https://maps.googleapis.com/maps/api/geocode/json"
@@ -30,18 +29,26 @@ gmaps = googlemaps.Client(key=GMAPS_KEY) if GMAPS_KEY else None
 # Route finding requires calling a slightly different endpoint
 route_api = "https://maps.googleapis.com/maps/api/directions/json"
 
+try:
+    query_db = pd.read_csv(os.path.join(save_path, 'QueryDB.csv'))
+except:
+    query_db = pd.DataFrame(
+        [], columns=["Lat1", "Long1", "Stop1", "Lat2", "Long2", "Stop2", "Distance", "Route", "Navigation Mode"]
+    )
 
-query_db = pd.DataFrame(
-    [], columns=["Lat1", "Long1", "Stop1", "Lat2", "Long2", "Stop2", "Distance", "Route", "Navigation Mode"]
-)
+try:
+    route_query_db = pd.read_csv(os.path.join(save_path, 'RouteQueryDB.csv'))
+except:
+    route_query_db = pd.DataFrame([], columns=["Lat1", "Long1", "Lat2", "Long2", "Stops"])
 
-route_query_db = pd.DataFrame([], columns=["Lat1", "Long1", "Lat2", "Long2", "Stops"])
-
-polyLineQueryDB = pd.DataFrame([], columns=["Route", "Stops", "PolyLine"])
+try:
+    poly_line_db = pd.read_csv(os.path.join(save_path, "PolyLineQB.csv"))
+except:
+    poly_line_db = pd.DataFrame([], columns=["Route", "Stops", "PolyLine"])
 
 
 def initializeDBs(stops, routes, poly):
-    global query_db, route_query_db, polyLineQueryDB
+    global query_db, route_query_db, poly_line_db
     try:
         if stops == stops and not stops.empty:
             query_db = stops
@@ -54,13 +61,13 @@ def initializeDBs(stops, routes, poly):
         pass
     try:
         if poly == poly and not poly.empty:
-            polyLineQueryDB = poly
+            poly_line_db = poly
     except:
         pass
 
 
 def getDBs():
-    return [query_db, route_query_db, polyLineQueryDB]
+    return [query_db, route_query_db, poly_line_db]
 
 
 def calculateLatLongDistanceWithStops(stop1, stop2):
@@ -154,8 +161,7 @@ def getRouteBetweenPoints(lat1, long1, lat2, long2):
 
         # save the updated query_db, saves after every query to avoid losing work if the API times
         # out during a batch request
-        os.chdir(os.path.dirname(__file__))
-        route_query_db.to_csv("RouteQueryDB.csv", index=False)
+        route_query_db.to_csv(os.path.join(save_path, "RouteQueryDB.csv"), index=False)
 
         return stop_list
 
@@ -222,7 +228,7 @@ def getVehicleRoute(stops, route_name):
     all_stops = str(stops)
 
     # Check if this query exists in the database already
-    query_check = polyLineQueryDB[(polyLineQueryDB["Route"] == route_name) & (polyLineQueryDB["Stops"] == all_stops)]
+    query_check = poly_line_db[(poly_line_db["Route"] == route_name) & (poly_line_db["Stops"] == all_stops)]
 
     if len(query_check) > 0:
         # Entry was found, return polyLine as an array converted from its stored string
@@ -248,9 +254,8 @@ def getVehicleRoute(stops, route_name):
 
         # save the updated queryDB, saves after every query to avoid losing work if the API times
         # out during a batch request
-        os.chdir(os.path.dirname(__file__))
-        polyLineQueryDB.loc[len(polyLineQueryDB.index)] = [route_name, all_stops, str(steps)]
-        polyLineQueryDB.to_csv("PolyLineQueryDB.csv", index=False)
+        poly_line_db.loc[len(poly_line_db.index)] = [route_name, all_stops, str(steps)]
+        poly_line_db.to_csv(os.path.join(save_path, "PolyLineQB.csv"), index=False)
         return steps
     except:
         print(f"Failed to find poly line for {route_name}")
@@ -426,8 +431,7 @@ def getRoutedDistanceFromLatLong(lat1, long1, lat2, long2, route, mode="driving"
 
                 # save the updated query_db, saves after every query to avoid losing work if the
                 # API times out during a batch request
-                os.chdir(os.path.dirname(__file__))
-                query_db.to_csv("QueryDB.csv", index=False)
+                query_db.to_csv(os.path.join(save_path, "QueryDB.csv"), index=False)
         else:
             print("Google failed to find a route between the points")
             quit(1)
@@ -542,8 +546,7 @@ def getRoutedDistanceFromAddresses(stop1, stop2, route, navigation_mode="driving
                     navigation_mode,
                 ]
                 # save the updated query_db
-                os.chdir(os.path.dirname(__file__))
-                query_db.to_csv("QueryDB.csv", index=False)
+                query_db.to_csv(os.path.join(save_path, "QueryDB.csv"), index=False)
         else:
             print(f"Google failed to find a route between {stop1} and {stop2}")
             quit(1)
@@ -609,8 +612,7 @@ def geocode(address, save=True):
                 ]
 
                 # save the updated query_db
-                os.chdir(os.path.dirname(__file__))
-                query_db.to_csv("QueryDB.csv", index=False)
+                query_db.to_csv(os.path.join(save_path, "QueryDB.csv"), index=False)
         else:
             print(f"Google failed to Geocode '{address}")
             quit(1)
@@ -692,8 +694,7 @@ def reverseGeocode(lat, long, save=True):
                 ]
 
                 # save the updated query_db
-                os.chdir(os.path.dirname(__file__))
-                query_db.to_csv("QueryDB.csv", index=False)
+                query_db.to_csv(os.path.join(save_path, "QueryDB.csv"), index=False)
         else:
             print(f"Google failed to reverse ({lat}, {long}) into a physical address")
             return ""
@@ -759,8 +760,7 @@ def getCleanAddress(address):
                 coords["lng"], returned_address, 0, "Geocode", "Geocode", ]
             
             # save the updated query_db
-            os.chdir(os.path.dirname(__file__))
-            query_db.to_csv("QueryDB.csv", index = False)
+            query_db.to_csv(os.path.join(save_path, "QueryDB.csv"), index = False)
         else:
             print(f"Google failed to lookup '{address}")
             quit(1)
