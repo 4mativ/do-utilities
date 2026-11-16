@@ -344,6 +344,7 @@ def getTripsForYear(year=f_year):
         save_as_csv=False,
         return_a_df=True,
         include_previous_years=True,
+        include_archived = False
     )
 
 
