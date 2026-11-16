@@ -1,5 +1,6 @@
 import os
 import requests
+import numpy as np
 from datetime import date, datetime
 from email import encoders
 from email.mime.base import MIMEBase
@@ -170,7 +171,7 @@ df_vendors = pd.DataFrame(
         )
 
 def initialize(filepath = os.getcwd()):
-    global df_toms_schools, initialized, df_accounts
+    global df_toms_schools, initialized, df_accounts, df_vendors
 
     initializeVariables(filepath)
     # Data for accessing the Google sheets file with account managers
@@ -207,7 +208,11 @@ def initialize(filepath = os.getcwd()):
         df_vendors.columns = df_vendors.iloc[0]
         df_vendors = df_vendors[1:]
         
-        df_vendors['TOMS ID'] = df_vendors['TOMS ID'].astype(int)
+        df_vendors['Name'] = df_vendors['Name'].replace("", np.nan)
+        
+        df_vendors = df_vendors.dropna(subset=['Name'])
+        
+        df_vendors['TOMS ID'] = [-1 if x == "" else int(x) for x in df_vendors['TOMS ID']]
         
     except Exception:
         # print("Can't access Google sheets currently\n\n")
@@ -1476,5 +1481,6 @@ def standardizeMode(mode_text):
 initialize()
 
 if __name__ == "__main__":
-    print()
+    print(getAlphaFromSchool("El Paso Leadership Academy"))
+    
     # generateRequirementsFile()
