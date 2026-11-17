@@ -53,7 +53,6 @@ def writeDfToDb(df, table_name="", dtype_dict=None, option="WRITE_APPEND"):
 def executeStatement(
     stmt=None,
     conversion_dict=None,
-    save_as_csv=False,
     return_a_df=True,
     include_previous_years=False,
     include_archived=False,
@@ -93,7 +92,7 @@ def executeStatement(
 
         # If we are saving the output, convert it to a df to return as-is
         # and/or to save as a csv
-        if save_as_csv or return_a_df:
+        if return_a_df:
             if "delete" in stmt.lower():
                 df = pd.DataFrame()
                 print(f"Can't return deleted files from this function, call from updateDb")
@@ -103,13 +102,6 @@ def executeStatement(
                     df = convertColumns(df, conversion_dict)
                 except:
                     print(f"Failed to convert df after running stmt {sql_stmt}")
-
-        # Save as query output csv, if expected
-        if save_as_csv:
-            df.to_csv(os.path.dirname(__file__) + "/Output/QueryOutput.csv", index=False)
-
-        # Return the df, if expected
-        if return_a_df:
             return df
 
     else:
@@ -157,9 +149,9 @@ def queryTripsDb(query, include_previous_years):
     return executeStatement(query, return_a_df=True, include_previous_years=include_previous_years)
 
 
-def updateDbFromFolder(table, school_year=f_year, column_conversion=trips_db_to_sql):
-    os.chdir(os.path.dirname(__file__))
-    df_update = generateMasterFile(os.path.dirname(__file__) + "\\Upload")
+def updateDbFromFolder(filepath, table, school_year=f_year, column_conversion=trips_db_to_sql):
+    os.chdir(filepath)
+    df_update = generateMasterFile(os.path.join(filepath, "Upload"))
 
     if "School Year" not in df_update.columns:
         df_update = convertColumns(df_update, sql_to_trips_db)
@@ -188,17 +180,17 @@ def updateDbFromFolder(table, school_year=f_year, column_conversion=trips_db_to_
         df_update = convertColumns(df_update, dict([(value, key) for key, value in column_conversion.items()]))
         df_update["Count"] = df_update.groupby("LegID")["LegID"].transform("count")
         df_update2 = df_update[df_update["Count"] > 1].sort_values(by=["LegID", "InvoiceRun", "Date"])
-        df_update2.to_csv(os.path.dirname(__file__) + "\\Output\\Dupes.csv", index=False)
+        df_update2.to_csv(os.path.join(filepath, "Output", "Dupes.csv"), index=False)
         df_update = df_update[df_update["Count"] == 1]
-        df_update.to_csv(os.path.dirname(__file__) + "\\Output\\Fine.csv", index=False)
+        df_update.to_csv(os.path.join(filepath, "Output","Fine.csv"), index=False)
 
         return
-    updateDb(table, df_update, school_year)
+    updateDb(filepath, table, df_update, school_year)
 
 
 # Update the trips db by either replacing existing entries or adding new ones
 # from the given df
-def updateDb(table, df_update, school_year=f_year):
+def updateDb(filepath, table, df_update, school_year=f_year):
     response = getInput(f"You've selected to update the {table} table, is that correct? (y/n)", True)
 
     if not response:
@@ -233,7 +225,7 @@ def updateDb(table, df_update, school_year=f_year):
                 f"There are {len(df) - len(dupe_ids)} entries in the TripsDB related to the file you're "
                 f"uploading! Their invoice runs are {df['invoice_run'].unique()}"
             )
-            df.to_csv(os.path.dirname(__file__) + "/Output/CurrentEntries.csv", index=False)
+            df.to_csv(os.path.join(filepath, "Output", "CurrentEntries.csv"), index=False)
             quit(1)
             df.drop_duplicates(subset=["leg_id"], inplace=True)
 
@@ -252,10 +244,10 @@ def updateDb(table, df_update, school_year=f_year):
             response = getInput(display_text, True)
             if not response:
                 print(f"Cancelling operation")
-                df.to_csv(os.path.dirname(__file__) + "/Output/PotentiallyArchivedEntries.csv", index=False)
+                df.to_csv(os.path.join(filepath, "Output", "PotentiallyArchivedEntries.csv"), index=False)
                 return
             archive_ids = list(df["record_id"].unique())
-            df.to_csv(os.path.dirname(__file__) + "/Output/ArchivedEntries.csv", index=False)
+            df.to_csv(os.path.join(filepath, "Output","ArchivedEntries.csv"), index=False)
 
             # Set the timestamp for all archived legs
             stmt = (
@@ -278,9 +270,9 @@ def updateDb(table, df_update, school_year=f_year):
         writeDfToDb(rows, table)
         print(f"Added {len(rows)} entries to {table}")
 
-    files = glob(os.path.dirname(__file__) + "/Upload/*")
+    files = glob(os.path.join(filepath, "Upload", "*"))
     for f in files:
-        temp = f.replace("/Upload", "")
+        temp = f.replace(f"{os.sep}Upload", "")
         move(f, temp)
 
 
@@ -341,7 +333,6 @@ def getLatestInvoiceRun(recent_runs_to_skip_over=0, runs_to_grab=1, only_mgmt=Fa
 def getTripsForYear(year=f_year):
     return executeStatement(
         f"SELECT * from {trips_table_name} where school_year = {year}",
-        save_as_csv=False,
         return_a_df=True,
         include_previous_years=True,
         include_archived = False
@@ -354,7 +345,6 @@ def getLastRecordID(year=f_year):
         f"SELECT school_year, ifnull(format('%s-%d', any_value(year), max(CAST(id_val as INT64))),any_value("
         f"record_id)) as record_id FROM  (select *, regexp_extract(record_id, r'.*-(.*)') id_val, regexp_extract("
         f"record_id,r'(.*)-.*') year from `{trips_table_name}`) group by school_year",
-        save_as_csv=False,
         return_a_df=True,
         include_previous_years=True,
     )
@@ -456,10 +446,11 @@ def main():
     match actions[action]:
         case "Get latest invoice run":
             df = getLatestInvoiceRun(0, 1, False)
-            df.to_csv(os.path.dirname(__file__) + "\\Output\\InvoiceRuns_bq.csv", index=False)
+            df.to_csv(os.path.join(os.path.dirname(__file__), "Output", "InvoiceRuns_bq.csv"), index=False)
 
         case "Update TripsDB via upload":
             updateDbFromFolder(
+                filepath = os.path.dirname(__file__),
                 table=trips_table_name,
                 school_year=f_year,
                 column_conversion=trips_db_to_sql,
@@ -468,23 +459,22 @@ def main():
             df = executeStatement(
                 stmt=f"Select from {trips_table_name} where invoice_run is not null",
                 conversion_dict=sql_to_trips_db,
-                save_as_csv=True,
                 return_a_df=True,
                 include_previous_years=False,
                 include_archived=False,
             )
-            df.to_csv(os.path.dirname(__file__) + "\\Output\\QueryOutput.csv", index=False)
+            df.to_csv(os.path.join(os.path.dirname(__file__), "Output", "QueryOutput.csv"), index=False)
         case "Get trips in months":
             df = getTripsInMonths([9], 2026)
-            df.to_csv(os.path.dirname(__file__) + "\\Output\\MonthTrips.csv", index=False)
+            df.to_csv(os.path.join(os.path.dirname(__file__), "Output", "MonthTrips.csv"), index=False)
 
         case "Get all mgmt fees":
             df = getYearsMgmt(f_year)
-            df.to_csv(os.path.dirname(__file__) + "\\Output\\MgmtFees.csv", index=False)
+            df.to_csv(os.path.join(os.path.dirname(__file__), "Output", "MgmtFees.csv"), index=False)
 
         case "Get all year":
             df = getTripsForYear(f_year)
-            df.to_csv(os.path.dirname(__file__) + "\\Output\\Year_entries.csv", index=False)
+            df.to_csv(os.path.join(os.path.dirname(__file__), "Output", "Year_entries.csv"), index=False)
             print(
                 f"There are {len(df)} entries which have {len(df['LegID'].unique())} leg ids and "
                 f"{len(df['RecordID'].unique())} record IDs"
