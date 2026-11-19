@@ -16,10 +16,7 @@ options.mode.chained_assignment = None
 
 
 def getLastMonthDataFromWarehouse(report_type="all_trips", profile="prod"):
-    today = datetime.now() - pd.DateOffset(months=1)
-    min_date = datetime(today.year, today.month, 1)
-    max_date = min_date + pd.DateOffset(months=1) - pd.DateOffset(days=1)
-    return getDataFromWarehouse(min_date, max_date, report_type, profile)
+    return getSchoolYearMonthDataFromWarehouse(school_year = f_year, month=datetime.now().month-1, report_type=report_type, profile=profile)
 
 
 def getUpdatedRamseyData():
@@ -517,6 +514,7 @@ def getCurrentVendorName(current_name, current_id, df_vendor):
         print(f"Failed to find a vendor with ID |{current_id}|")
         return current_name
 
+
 def cleanData(arr, min_date=datetime.today(), max_date=datetime.today(), report_type="all_trips", filter_dates=True):
     
     df_vendor = pd.DataFrame()
@@ -551,10 +549,6 @@ def cleanData(arr, min_date=datetime.today(), max_date=datetime.today(), report_
         
         if "school" in cur_col.lower():
 
-            # if report_type == "weekly_comms":
-            # 	arr[cur_col] = [x if x == x else getSchoolFromAlpha(y[:3]) for x, y in zip(arr[
-            # 	cur_col], arr['FromName'])]
-
             # Remove trailing/leading spaces or double spaces from school names
             arr[cur_col] = [x if x != x else str(x).strip().replace("  ", " ") for x in arr[cur_col]]
             # Fix MELA
@@ -579,7 +573,6 @@ def cleanData(arr, min_date=datetime.today(), max_date=datetime.today(), report_
             if "VendorId" in arr.columns:
                 arr[cur_col] = [getCurrentVendorName(x, y, df_vendor) for x, y in zip(arr[cur_col], arr['VendorId'])]
 
-            # arr[cur_col].fillna("", inplace=True)
             arr.fillna({cur_col: ""}, inplace=True)
 
             conversions = {
@@ -593,7 +586,6 @@ def cleanData(arr, min_date=datetime.today(), max_date=datetime.today(), report_
                 "First Student": "First Student",
                 "Pride": "Pride-PTB",
                 "Rainbow": "Rainbow/B&W",
-                # "Eventsource Ministries": "Event Source",
             }
 
             for cur_conversion in conversions:
@@ -604,7 +596,6 @@ def cleanData(arr, min_date=datetime.today(), max_date=datetime.today(), report_
                 )
             except:
                 pass
-            # arr[cur_col] = [x.strip().replace("  ", " ").replace(" Bus", "") for x in arr[cur_col]]
 
     # Short lived change to school name
     arr = arr.replace("Yellowstone Schools", "Yellowstone Academy")
@@ -695,6 +686,11 @@ def getSchoolYearMonthDataFromWarehouse(school_year, month, report_type="all_tri
     # Convert the given month to a date range to pull
     start_date = datetime(school_year, month, 1)
     max_date = start_date + DateOffset(months=1) - DateOffset(days=1)
+    
+    # If the end of the month falls on a weekend, adjust to the last friday
+    if max_date.weekday() > 4:
+        max_date -= DateOffset(days = datetime.now().weekday() + 4)
+    
     month_data = getDataFromWarehouse(start_date, max_date, report_type, profile)
 
     # Sometime when we pull data near the end/start of a month, the data is likely incomplete and
@@ -753,7 +749,7 @@ def test():
     start_date = datetime(2025, 11, 4)
     max_date = datetime(2025, 11, 13)
 
-    # updateSchools()
+    updateSchools()
 
     all_report_types = [
         "adm",
@@ -771,11 +767,11 @@ def test():
         "old_curb",
     ]
 
-    report_type = "historical_trips"
+    report_type = "daily_comms"
 
     os.chdir(os.path.dirname(__file__))
 
-    selection = 0
+    selection = 2
 
     if selection == 0:
         dw_report = getDataFromWarehouse(start_date, max_date, report_type)
@@ -827,10 +823,6 @@ def test():
 
 
 if __name__ == "__main__":
-    # getNewProductData()
     start_time = time()
-    # updateSchools()
-    # getUpdatedRamseyData()
-    # approximateLastMonthDataFromWarehouse()
     test()
     print(f"--- {time() - start_time} seconds ---")

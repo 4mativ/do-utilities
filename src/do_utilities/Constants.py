@@ -55,15 +55,15 @@ active_diagnostics_folder = os.path.join(diagnostics_drive, "0. Consulting - Ong
 
 billing_doc_id = "12NvTg2NfkuvnT-bM7lO0eTu4WW3BWA7ul0t0y7YvX7E"
 
-# f_year ~= 2024
+# f_year ~= 2027
 f_year = datetime.now().year + (
     1 if datetime.now().month > 7 or (datetime.now().month > 6 and datetime.now().day > 25) else 0
 )
 
-# fiscal_year ~= FY24
+# fiscal_year ~= FY27
 fiscal_year = f"FY{str(f_year)[2:]}"
 
-# School Year ~= SY23-24
+# School Year ~= SY26-27
 school_year = f"SY{str(f_year - 1)[2:]}-{str(f_year)[2:]}"
 
 # The current pricing scheme for variable price vendors: cost per picked up student, cost per
@@ -161,10 +161,8 @@ months = {
     12: "December",
 }
 
-
 data_ops_drive_id = "0AEjNd0TBUj-JUk9PVA"
 general_drive_id = "0AMbHK88Jjh41Uk9PVA"
-
 
 trips_db_columns = [
     "InvoiceRun",
@@ -197,7 +195,6 @@ trips_db_columns = [
     "ArchiveTimestamp",
     "RecordID",
 ]
-
 
 valid_accomodations = [
     "curb_to_curb",
@@ -330,13 +327,11 @@ ignored_vendors = [
 
 creds = {}
 
-cred_location = data_ops_drive + "/Credentials/MasterCredentials.json"
+cred_location = os.path.join(data_ops_drive, "Credentials", "MasterCredentials.json")
 
 invoicing_db_path = ""
 
 df_standardizations = pd.DataFrame(columns = ['Text', 'Abbreviation'])
-
-# print(f"os.environ = \n\n{os.environ}\n\n")
 
 
 def initializeVariables(filepath = os.getcwd()):
@@ -408,5 +403,6 @@ def setCreds(cred_name, new_creds, save_change=False, add_if_new=False):
 
 def getStandards():
     return df_standardizations
+
 
 initializeVariables()
