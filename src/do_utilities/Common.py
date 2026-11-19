@@ -22,15 +22,14 @@ from anglicize import anglicize
 from rapidfuzz import process, fuzz
 from copy import deepcopy
 
-# from Geocoding.GoogleApi import GetRoutedDistance, equivalentAddresses
 try:
-    from do_utilities.Constants import getStandards, getCred, data_ops_drive, initializeVariables
+    from do_utilities.Constants import getStandards, getCred, data_ops_drive, initializeVariables, ignored_vendors
     from do_utilities.AddressStandardizer import convertAddress
     from do_utilities.QueryDataWarehouse import getDataForLastXWeeks
     from do_utilities.Geocoding.GoogleApi import getRoutedDistance, equivalentAddresses
 
 except:
-    from Constants import getStandards, getCred, data_ops_drive, initializeVariables
+    from Constants import getStandards, getCred, data_ops_drive, initializeVariables, ignored_vendors
     from AddressStandardizer import convertAddress
     from QueryDataWarehouse import getDataForLastXWeeks
     from Geocoding.GoogleApi import getRoutedDistance, equivalentAddresses
@@ -170,6 +169,7 @@ df_vendors = pd.DataFrame(
             ],
         )
 
+
 def initialize(filepath = os.getcwd()):
     global df_toms_schools, initialized, df_accounts, df_vendors
 
@@ -215,7 +215,6 @@ def initialize(filepath = os.getcwd()):
         df_vendors['TOMS ID'] = [-1 if x == "" else int(x) for x in df_vendors['TOMS ID']]
         
     except Exception:
-        # print("Can't access Google sheets currently\n\n")
         df_accounts = pd.DataFrame(
             [],
             columns=[
@@ -332,6 +331,7 @@ def getSchoolDF():
 def getVendors():
     return df_vendors
 
+
 # Get the account df
 def getAccountsForDebugging():
     return df_accounts
@@ -343,30 +343,6 @@ def getSchoolMatrixRegionPath(alpha):
     if state != state or str(state).lower() == "nan":
         print(f"Failed to find state for: {alpha}")
         quit(1)
-    return f"{os.sep}{state}{os.sep}{alpha}{os.sep}"
-
-
-# Get the QBR filepath for saving, file path is State\Alpha\
-def getSchoolSharedFolderPath(alpha):
-    school = getSchoolFromAlpha(alpha)
-    if school == "Ramsey Cty-Foster":
-        return f"MSP RAM{os.sep}MSP RAM FULL{os.sep}"
-    state = compareToSchools(school, "School", ["State"])[0]
-
-    shared_folder_name = "4mativ-" + alpha + "-Shared Folder"
-
-    if state == "MN":
-        return f"MSP{os.sep}{alpha}{os.sep}{shared_folder_name}{os.sep}"
-    elif state == "TX":
-        state = "HOU"
-    elif state == "IN":
-        state = f"IND{os.sep}INDY"
-    elif state == "AZ":
-        state = f"PHX{os.sep}Paul Revere" if alpha == "PRA" else f"PHX{os.sep}VCP Arizona"
-    else:
-        print(f"ERROR: NO state found for {alpha} / {school}")
-        quit(1)
-
     return f"{os.sep}{state}{os.sep}{alpha}{os.sep}"
 
 
@@ -458,7 +434,6 @@ def generateMasterFile(folder, add_filename_column=False, return_dict=False, rec
             xl = read_excel(file, sheet_name=None)
             for sheet in xl.keys():
                 df_sheet = xl[sheet]
-                # df_sheet.dropna(how="all", axis=1, inplace=True)
 
                 df_sheet["InputFile"] = file + "|" + sheet
                 lookup_dict[file + "|" + sheet] = df_sheet
@@ -649,12 +624,12 @@ def extractTime(entry):
 
 
 # Generates a requirements.txt file based on imported libraries
-def generateRequirementsFile(move_locations = True):
+def generateRequirementsFile(move_locations = False):
     try:
         if move_locations:
             os.chdir(os.path.dirname(__file__))
         
-        current_path = os.path.abspath(__file__).split(os.sep)
+        current_path = os.getcwd().split(os.sep)
         repo_path = os.sep.join(current_path[:current_path.index("GitHub") + 2]) + os.sep
         
         command = f"python.exe -m pip list --format=freeze > {repo_path}{os.sep}requirements.txt"
@@ -709,7 +684,6 @@ def archiveRun(start_location, current_files=True):
             paths = [archive_path + f"LastRun{os.sep}"]
             print("ERROR: Failed to Unload last run files")
 
-
     for input_folder in next(os.walk(start_location))[1]:
         if input_folder.lower() in ["used", ".gitkeep"]:
             continue
@@ -762,7 +736,6 @@ def getPreviousRun(start_location):
     # Save the current location of the run's folder
     newest_path = os.path.join(start_location, "Run Files", "Used", newest_folder)
     
-
     # Iterate through each folder in the last run and move its contents to the Run Files folder
     for folder in next(os.walk(newest_path))[1]:
         if "output" in folder.lower():
@@ -835,35 +808,8 @@ def cleanText(text, translate=False, printing=True):
         text = anglicize(text)
 
     apos_replacements = [
-        "′",
-        "`",
-        "'",
-        "ʻ",
-        "ʼ",
-        "´",
-        "ʹ",
-        "'",
-        "ʽ",
-        "ʾ",
-        "ʿ",
-        "ˈ",
-        "ˊ",
-        "ˮ",
-        "ʹ",
-        "΄",
-        "՚",
-        "׳",
-        "᾽",
-        "᾿",
-        "‘",
-        "’",
-        "‛",
-        "′",
-        "‵",
-        "Ꞌ",
-        "ꞌ",
-        "＇",
-        "'",
+        "′", "`", "'", "ʻ", "ʼ", "´", "ʹ", "'", "ʽ", "ʾ", "ʿ", "ˈ", "ˊ", "ˮ",
+        "ʹ", "΄", "՚", "׳", "᾽", "᾿", "‘", "’", "‛", "′", "‵", "Ꞌ", "ꞌ", "＇", "'",
     ]
     for cur in apos_replacements:
         text = text.replace(cur, "'")
@@ -882,6 +828,7 @@ def cleanText(text, translate=False, printing=True):
         "\u202d": "",
         "\u0026": "&",
         "'\xa0'": "",
+        "—": " - ",
     }
     for cur in other_replacements:
         text = text.replace(cur, other_replacements[cur])
@@ -943,14 +890,13 @@ def convertDistrictKids(school_name, collapse_all_districts=False, for_invoicing
             if collapse_all_districts | (for_invoicing & (district in convert_for_invoicing)):
                 return district
         except:
-            # print("Error with finding the district for", school_name)
             pass
 
     return school_name
 
 
+# Remove archived trailing text and leading 0s from route numbers to match easier
 def standardizeRouteName(route_name):
-    not_riding_vendors = ["Unassigned", "WALK", "DISTANCE", "PPU", "CARPOOL", "TRANSIT"]
 
     if "(archived" in route_name:
         route_name = route_name[: route_name.rfind("archived") - 1]
@@ -959,7 +905,7 @@ def standardizeRouteName(route_name):
         if arr[i] == "":
             continue
         # Leave Field trips or routes with camelCase or PascalCase alone
-        if arr[i][:2] == "FT" or (arr[i] != arr[i].upper() and arr[i].lower()) or (arr[i] in not_riding_vendors):
+        if arr[i][:2] == "FT" or (arr[i] != arr[i].upper() and arr[i].lower()) or (arr[i] in ignored_vendors):
             continue
         arr[i] = arr[i].title() if arr[i].upper() not in ["SS"] else arr[i]
         if arr[i][0] == "0":
@@ -969,6 +915,8 @@ def standardizeRouteName(route_name):
     return "_".join(arr).replace(" ", "")
 
 
+# Use a vendors ID# to convert them to a standard name
+# This is to combat mid-month changes of the vendor name
 def getCurrentVendorName(vendor_id):
     if df_vendors.empty or vendor_id not in df_vendors['TOMS ID'].unique():
         return ""
@@ -992,11 +940,6 @@ def compareToSchools(string_to_comp, field_to_comp, fields_to_return=None):
     return_value = [] if len(fields_to_return) > 0 else nan
     # Certain fields need to be processed differently
     if field_to_comp not in ["School", "Code", "State", "Pod"]:
-        # if field_to_comp == "Street":
-        #     # if the requested filed is the street, we only want the street part of the address
-        #     string_to_comp = convertAddress(string_to_comp, True)
-        # else:
-        #     string_to_comp = convertAddress(string_to_comp)
         string_to_comp = cleanText(string_to_comp)
     else:
         string_to_comp = string_to_comp.title() if field_to_comp in "School" else string_to_comp.upper()
@@ -1097,7 +1040,7 @@ def getSchoolsInState(state_initials, get_alpha = False):
     
     if state_initials == "":
         arr = []
-        for cur_state in ["MN", "TX", "IN", "AZ"]:
+        for cur_state in df_toms_schools['State'].unique():
             arr.append(getSchoolsInState(cur_state, get_alpha))
             return sum(arr, [])
     
@@ -1128,14 +1071,14 @@ def getSchoolsInState(state_initials, get_alpha = False):
 
 
 # Get all of the known schools in the given state
-def getSchoolsInPod(pod_name, get_alpha = False, getDistricts = False):
+def getSchoolsInPod(pod_name, get_alpha = False, get_districts = False):
     if not initialized:
         print(f"Error: Common has not been initialized")
         return
     schools = compareToSchools(pod_name, "Pod", ["Code" if get_alpha else "School"])
     districts = compareToSchools(pod_name, "Pod", ["District Alpha" if get_alpha else "District"])
     
-    schools = list(set(list(schools) + list(districts))) if getDistricts else list(
+    schools = list(set(list(schools) + list(districts))) if get_districts else list(
         set(list(schools))
     )
     
@@ -1359,7 +1302,6 @@ def mergeJson(local_base, local_addition, unique_keys, extract_names_only=False)
                         base[match[2]]["name"] = (
                             addition[i]["name"] if "Unknown" in addition[i]["name"] else base[match[2]]["name"]
                         )
-                # addition[i]["name"] += "_new"
 
         for key in unique_keys:
             if wiped:
@@ -1481,6 +1423,4 @@ def standardizeMode(mode_text):
 initialize()
 
 if __name__ == "__main__":
-    print(getAlphaFromSchool("El Paso Leadership Academy"))
-    
-    # generateRequirementsFile()
+    generateRequirementsFile()
