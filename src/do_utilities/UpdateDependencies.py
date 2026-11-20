@@ -29,7 +29,7 @@ def generateRequirementsFile(repo_name):
             for cur_library in requirements:
                 if cur_library.split("=")[0] in data_ops_libraries:
                     cur_library = cur_library.split("=")[0]
-                    cur_library = f"{cur_library.replace("-", "_")} @ git+https://github.com/4mativ/{cur_library}.git@main\n"
+                    cur_library = f"{cur_library.replace("-", "_")} @ git+https://github.com/4mativ/{cur_library.replace("_", "-")}.git@main\n"
                 cur_library = cur_library.replace("==", "~=")
                 file.write(cur_library)
     except Exception:
@@ -38,10 +38,9 @@ def generateRequirementsFile(repo_name):
 
 def forceReinstallLibrary(repo_name, library):
     try:
-        command = f"python.exe -m pip install --upgrade --force-reinstall --no-deps "
+        command = f"python.exe -m pip install --upgrade --force-reinstall --no-deps"
         if library[:3] in ["do_", "do-"]:
-            library = library.replace("_", "-")
-            command += f"git+https://github.com/4mativ/{library}.git@main"
+            command += f" {library.replace("-", "_")} git+https://github.com/4mativ/{library.replace("_","-")}.git@main"
         else:
             command += library
         
