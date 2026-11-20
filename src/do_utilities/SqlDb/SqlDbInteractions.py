@@ -8,7 +8,6 @@ import numpy as np
 
 from google.cloud import bigquery
 from google.oauth2 import service_account
-from datetime import datetime
 
 try:
     from do_utilities.Common import generateMasterFile, getCreds, getInput, convertDistrictKids
@@ -414,7 +413,7 @@ def getSpecificInvoiceRun(invoice_run=None):
 # Get a df of the tripsDB entries for the latest invoice run
 def getYearsMgmt(year):
 
-    sql_stmt = f"SELECT * from {trips_table_name} where school_year = {year} and trip_type = 'management'"
+    sql_stmt = f"SELECT * from {trips_table_name} where school_year = {year} and trip_type = 'management' and archive_timestamp is null"
 
     df = executeStatement(
         stmt=sql_stmt,

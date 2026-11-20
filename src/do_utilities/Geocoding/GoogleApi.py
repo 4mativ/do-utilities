@@ -27,6 +27,7 @@ gparams = {"key": GMAPS_KEY}
 gmaps = googlemaps.Client(key=GMAPS_KEY) if GMAPS_KEY else None
 
 # Route finding requires calling a slightly different endpoint
+# We will be sunsetting this in the future
 route_api = "https://maps.googleapis.com/maps/api/directions/json"
 
 try:
