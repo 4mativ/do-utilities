@@ -541,6 +541,7 @@ def cleanData(arr, min_date=datetime.today(), max_date=datetime.today(), report_
             arr[cur_col] = arr[cur_col].str.replace(r" \(.*\)", "", regex=True)
             arr[cur_col] = arr[cur_col].str.replace(r"_0", "_", regex=True)
             arr[cur_col] = arr[cur_col].str.replace(" ", "")
+            arr[cur_col] = arr[cur_col].str.replace("TempCab", "Tempcab")
 
         if "name" in cur_col.lower():
             arr[cur_col] = [x.replace("`", "'").replace("’", "'") if x == x else x for x in arr[cur_col]]
@@ -576,7 +577,10 @@ def cleanData(arr, min_date=datetime.today(), max_date=datetime.today(), report_
                 
                 df_temp = arr.groupby('VendorId')
                 for cur_id, rows in df_temp:
-                    cur_name = rows[cur_col].mode()[0]
+                    try:
+                        cur_name = rows[cur_col].mode()[0]
+                    except:
+                        cur_name = ""
                     arr.loc[rows.index, cur_col] = getCurrentVendorName(cur_name, cur_id, df_vendor)
 
             arr.fillna({cur_col: ""}, inplace=True)
