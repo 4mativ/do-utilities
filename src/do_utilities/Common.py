@@ -24,13 +24,13 @@ from copy import deepcopy
 
 try:
     from do_utilities.Constants import getStandards, getCred, data_ops_drive, initializeVariables, ignored_vendors
-    from do_utilities.AddressStandardizer import convertAddress
+    from do_utilities.AddressStandardizer import convertAddress, streetAddressApproximatelyEqual
     from do_utilities.QueryDataWarehouse import getDataForLastXWeeks
     from do_utilities.Geocoding.GoogleApi import getRoutedDistance, equivalentAddresses
 
 except:
     from Constants import getStandards, getCred, data_ops_drive, initializeVariables, ignored_vendors
-    from AddressStandardizer import convertAddress
+    from AddressStandardizer import convertAddress, streetAddressApproximatelyEqual
     from QueryDataWarehouse import getDataForLastXWeeks
     from Geocoding.GoogleApi import getRoutedDistance, equivalentAddresses
 
@@ -829,6 +829,9 @@ def cleanText(text, translate=False, printing=True):
         "\u0026": "&",
         "'\xa0'": "",
         "—": " - ",
+        "Ã±": "n",
+        "Ã©": "e",
+        "Ã­": "i",
     }
     for cur in other_replacements:
         text = text.replace(cur, other_replacements[cur])
@@ -1233,7 +1236,7 @@ def fuzzyMatchSchool(given_name, cutoff=90):
 # Merge two json objects, using the first as the base/authority. Provide any required unique keys to ensure dupes
 # are removed
 # When using for DataTemplateToTOMS, base = template, addition = TOMS
-def mergeJson(local_base, local_addition, unique_keys, extract_names_only=False):
+def mergeJson(local_base, local_addition, unique_keys, extract_names_only=False, match_addresses_exactly=True):
 
     if extract_names_only:
         try:
@@ -1257,8 +1260,11 @@ def mergeJson(local_base, local_addition, unique_keys, extract_names_only=False)
                 for i in range(len(base_values)):
                     unique = True
                     for j in range(i + 1, len(base_values)):
-                        if equivalentAddresses(base_values[i], base_values[j]):
-                            unique = False
+                        if match_addresses_exactly:
+                            if equivalentAddresses(base_values[i], base_values[j]):
+                                unique = False
+                            else:
+                                unique = not streetAddressApproximatelyEqual(base_values[i], base_values[j],90)
                     if unique:
                         final_base.append(deepcopy(base[i]))
                 base = deepcopy(final_base)
