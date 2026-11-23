@@ -40,7 +40,7 @@ def forceReinstallLibrary(repo_name, library):
     try:
         command = f"python.exe -m pip install --upgrade --force-reinstall --no-deps"
         if library[:3] in ["do_", "do-"]:
-            # The string below is an SSH access key that allows you to access our repos
+            # The string below is an GitHub Personal Access Token that allows you to access our repos
             command += f" {library.replace("-", "_")} git+https://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@github.com/4mativ/{library.replace("_","-")}.git@main"
         else:
             command += library
