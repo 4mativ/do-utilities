@@ -40,12 +40,14 @@ def forceReinstallLibrary(repo_name, library):
     try:
         command = f"python.exe -m pip install --upgrade --force-reinstall --no-deps"
         if library[:3] in ["do_", "do-"]:
-            command += f" {library.replace("-", "_")} git+https://github.com/4mativ/{library.replace("_","-")}.git@main"
+            # The string below is an GitHub Personal Access Token that allows you to download our repos
+            command += f" git+https://github.com/4mativ/{library.replace("_", "-")}.git@main"
         else:
             command += library
         
         repo_path = os.path.join(github_file_path, repo_name)
         os.chdir(repo_path)
+        print("From", repo_path)
         print(command)
         os.system(command)
     except Exception as ex:
