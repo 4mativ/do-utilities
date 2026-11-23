@@ -526,6 +526,7 @@ def cleanData(arr, min_date=datetime.today(), max_date=datetime.today(), report_
             from Common import getVendors
         
         df_vendor = getVendors()
+        df_vendor['TOMS ID'] = df_vendor['TOMS ID'].astype('Int64')
     # If the data is sorted by date, then filter to just the given date range, else remove
     # duplicates between months
     if "Date" in arr.columns:
@@ -571,7 +572,12 @@ def cleanData(arr, min_date=datetime.today(), max_date=datetime.today(), report_
 
         if cur_col in ["TransportationVendor", "Vendor"]:
             if "VendorId" in arr.columns:
-                arr[cur_col] = [getCurrentVendorName(x, y, df_vendor) for x, y in zip(arr[cur_col], arr['VendorId'])]
+                arr['VendorId'] = arr['VendorId'].astype('Int64')
+                
+                df_temp = arr.groupby('VendorId')
+                for cur_id, rows in df_temp:
+                    cur_name = rows[cur_col].mode()[0]
+                    arr.loc[rows.index, cur_col] = getCurrentVendorName(cur_name, cur_id, df_vendor)
 
             arr.fillna({cur_col: ""}, inplace=True)
 
@@ -767,11 +773,11 @@ def test():
         "old_curb",
     ]
 
-    report_type = "daily_comms"
+    report_type = "all_trips"
 
     os.chdir(os.path.dirname(__file__))
 
-    selection = 2
+    selection = 3
 
     if selection == 0:
         dw_report = getDataFromWarehouse(start_date, max_date, report_type)
@@ -781,7 +787,7 @@ def test():
     elif selection == 2:
         dw_report = getDataForLastXWeeks(1, report_type, 0)
     elif selection == 3:
-        dw_report = getSchoolYearMonthDataFromWarehouse(2026, month=1, report_type=report_type)
+        dw_report = getSchoolYearMonthDataFromWarehouse(2027, month=11, report_type=report_type)
     elif selection == 4:
         dw_report = getNewProductData(report_type, start_date)
         report_type = f"Product_{report_type}"
