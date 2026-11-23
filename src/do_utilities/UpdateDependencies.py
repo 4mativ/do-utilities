@@ -46,6 +46,7 @@ def forceReinstallLibrary(repo_name, library):
         
         repo_path = os.path.join(github_file_path, repo_name)
         os.chdir(repo_path)
+        print("From", repo_path)
         print(command)
         os.system(command)
     except Exception as ex:
